@@ -7,7 +7,7 @@ import { QuickWaterModal } from './components/modals/QuickWaterModal';
 import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, WeightForm, WeightList, WeightHistory } from './components/tabs';
 import { callGeminiWithFallback } from './services/gemini';
 import { PROMPTS } from './lib/prompts';
-import { CONFIG } from './lib/config';
+import { CONFIG, STORAGE_KEYS } from './lib/config';
 import { getLocalISOString } from './lib/utils';
 import { useAutoClearStatus } from './hooks/useStatusMessage';
 import { useImportExport } from './hooks/useImportExport';
