@@ -7,8 +7,11 @@ import { QuickWaterModal } from './components/modals/QuickWaterModal';
 import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, WeightForm, WeightList, WeightHistory } from './components/tabs';
 import { callGeminiWithFallback } from './services/gemini';
 import { PROMPTS } from './lib/prompts';
-import { CONFIG, STORAGE_KEYS } from './lib/config';
-import { getLocalISOString, safeLoadFromStorage } from './lib/utils';
+import { CONFIG } from './lib/config';
+import { getLocalISOString } from './lib/utils';
+import { useAutoClearStatus } from './hooks/useStatusMessage';
+import { useImportExport } from './hooks/useImportExport';
+import { useHydrateFromStorage, usePersistToStorage } from './hooks/useStorageSync';
 import type {
   ApiKeys, WeightLog, FoodLog, ActivityLog, WaterLog, ChartData,
   AnalyzedFood, AnalyzedActivity, AnalyzedWater,
@@ -87,59 +90,40 @@ const App: React.FC = () => {
   const analysisResultRef = useRef<HTMLDivElement>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Clear status message after 3 seconds
-  useEffect(() => {
-    if (statusMessage) {
-      const timer = setTimeout(() => setStatusMessage(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [statusMessage]);
-  // Helper to sort by ID descending (newest first)
-  const sortByIdDesc = <T extends { id: number }>(arr: T[]): T[] =>
-    [...arr].sort((a, b) => (b.id || 0) - (a.id || 0));
+  useAutoClearStatus(statusMessage, setStatusMessage, 3000);
 
-  // Load data from localStorage
-  useEffect(() => {
-    setWeightLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.WEIGHT_LOGS, [])));
-    setFoodLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.FOOD_LOGS, [])));
-    setActivityLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.ACTIVITY_LOGS, [])));
-    setFavoriteFoods(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_FOODS, []));
-    setWaterLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.WATER_LOGS, [])));
-    setFavoriteWaterContainers(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, []));
-    setResistanceDefs(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_DEFS, []));
-    setResistanceLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_LOGS, [])));
+  useHydrateFromStorage({
+    setWeightLogs,
+    setFoodLogs,
+    setActivityLogs,
+    setFavoriteFoods,
+    setWaterLogs,
+    setFavoriteWaterContainers,
+    setResistanceDefs,
+    setResistanceLogs,
+    setCoachAdvice,
+    setDailyTarget,
+    setActivityTarget,
+    setWaterTarget,
+    setApiKeys,
+    setLoading
+  });
 
-    const ca = localStorage.getItem(STORAGE_KEYS.COACH_ADVICE);
-    const dt = localStorage.getItem(STORAGE_KEYS.DAILY_TARGET);
-    const at = localStorage.getItem(STORAGE_KEYS.ACTIVITY_TARGET);
-    const wt = localStorage.getItem(STORAGE_KEYS.WATER_TARGET);
-    const k = localStorage.getItem(STORAGE_KEYS.API_KEYS);
-
-    if (ca) setCoachAdvice(ca);
-    if (dt) setDailyTarget(Number(dt));
-    if (at) setActivityTarget(Number(at));
-    if (wt) setWaterTarget(Number(wt));
-    if (k) { try { setApiKeys(JSON.parse(k)); } catch { } }
-    setLoading(false);
-  }, []);
-
-  // Save data to localStorage
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem(STORAGE_KEYS.WEIGHT_LOGS, JSON.stringify(weightLogs));
-      localStorage.setItem(STORAGE_KEYS.FOOD_LOGS, JSON.stringify(foodLogs));
-      localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(activityLogs));
-      localStorage.setItem(STORAGE_KEYS.FAVORITE_FOODS, JSON.stringify(favoriteFoods));
-      localStorage.setItem(STORAGE_KEYS.WATER_LOGS, JSON.stringify(waterLogs));
-      localStorage.setItem(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, JSON.stringify(favoriteWaterContainers));
-      localStorage.setItem(STORAGE_KEYS.COACH_ADVICE, coachAdvice);
-      localStorage.setItem(STORAGE_KEYS.DAILY_TARGET, dailyTarget.toString());
-      localStorage.setItem(STORAGE_KEYS.ACTIVITY_TARGET, activityTarget.toString());
-      localStorage.setItem(STORAGE_KEYS.WATER_TARGET, waterTarget.toString());
-      localStorage.setItem(STORAGE_KEYS.RESISTANCE_DEFS, JSON.stringify(resistanceDefs));
-      localStorage.setItem(STORAGE_KEYS.RESISTANCE_LOGS, JSON.stringify(resistanceLogs));
-    }
-  }, [weightLogs, foodLogs, activityLogs, favoriteFoods, waterLogs, favoriteWaterContainers, coachAdvice, dailyTarget, activityTarget, waterTarget, resistanceDefs, resistanceLogs, loading]);
+  usePersistToStorage({
+    loading,
+    weightLogs,
+    foodLogs,
+    activityLogs,
+    favoriteFoods,
+    waterLogs,
+    favoriteWaterContainers,
+    coachAdvice,
+    dailyTarget,
+    activityTarget,
+    waterTarget,
+    resistanceDefs,
+    resistanceLogs
+  });
 
   useEffect(() => {
     if (inputModalType) {
@@ -194,113 +178,37 @@ const App: React.FC = () => {
     setTargetModal(null);
   };
 
-  const handleExport = async () => {
-    const data = JSON.stringify({ weightLogs, foodLogs, activityLogs, favoriteFoods, waterLogs, favoriteWaterContainers, coachAdvice, dailyTarget, activityTarget, waterTarget, resistanceDefs, resistanceLogs }, null, 2);
-    const filename = `PeterPlan_Backup_${getLocalISOString()}.json`;
-
-    // Try File System Access API first (Desktop Chrome/Edge/Opera)
-    try {
-      if ('showSaveFilePicker' in window) {
-        // @ts-ignore
-        const handle = await window.showSaveFilePicker({
-          suggestedName: filename,
-          types: [{
-            description: 'JSON Backup File',
-            accept: { 'application/json': ['.json'] },
-          }],
-        });
-        // @ts-ignore
-        const writable = await handle.createWritable();
-        // @ts-ignore
-        await writable.write(data);
-        // @ts-ignore
-        await writable.close();
-        setStatusMessage({ type: 'success', text: "備份成功！" });
-        return;
-      }
-    } catch (err: any) {
-      if (err.name === 'AbortError') return; // User cancelled
-      console.error('File Picker failed, falling back:', err);
-    }
-
-    const file = new File([data], filename, { type: "application/json" });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Peter健康計劃備份' }); return; } catch { }
-    }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setStatusMessage({ type: 'success', text: "備份已下載" });
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-
-    const file = e.target.files?.[0];
-
-    if (!file) {
-
-      return;
-    }
-
-
-
-    const r = new FileReader();
-    r.onload = (ev) => {
-
-      try {
-        const rawData = ev.target?.result as string;
-        const d = JSON.parse(rawData);
-
-
-        // Use helper to support both new keys and legacy mj_ keys
-        // If d has 'mj_weightLogs' but not 'weightLogs', this helper finds it.
-        const get = (key: string) => d[key] !== undefined ? d[key] : d[`mj_${key}`];
-
-        let importCount = 0;
-
-        const w = get('weightLogs'); if (w) { setWeightLogs(w); importCount++; }
-        const f = get('foodLogs'); if (f) { setFoodLogs(f); importCount++; }
-        const a = get('activityLogs'); if (a) { setActivityLogs(a); importCount++; }
-        const ff = get('favoriteFoods'); if (ff) { setFavoriteFoods(ff); importCount++; }
-        const wl = get('waterLogs'); if (wl) { setWaterLogs(wl); importCount++; }
-        const fwc = get('favoriteWaterContainers'); if (fwc) { setFavoriteWaterContainers(fwc); importCount++; }
-        const ca = get('coachAdvice'); if (ca) { setCoachAdvice(ca); importCount++; }
-
-        const rd = get('resistanceDefs'); if (rd) { setResistanceDefs(rd); importCount++; }
-        const rl = get('resistanceLogs'); if (rl) { setResistanceLogs(rl); importCount++; }
-
-        // Handle targets which might be numbers (0 is falsy, check undefined)
-        const dt = get('dailyTarget'); if (dt !== undefined) { setDailyTarget(dt); importCount++; }
-        const at = get('activityTarget'); if (at !== undefined) { setActivityTarget(at); importCount++; }
-        const wt = get('waterTarget'); if (wt !== undefined) { setWaterTarget(wt); importCount++; }
-
-
-
-        if (importCount > 0) {
-          setStatusMessage({ type: 'success', text: `還原成功！已匯入 ${importCount} 類資料` });
-        } else {
-          setStatusMessage({ type: 'error', text: "還原失敗：未能在檔案中找到有效的資料" });
-        }
-      } catch (err) {
-        console.error('Import parse error:', err);
-        setStatusMessage({ type: 'error', text: "格式錯誤: " + (err instanceof Error ? err.message : String(err)) });
-      }
-
-      // Reset input via ref to allow re-selecting same file
-      if (importInputRef.current) {
-        importInputRef.current.value = '';
-      }
-    };
-    r.onerror = (err) => {
-      console.error('FileReader error:', err);
-      setStatusMessage({ type: 'error', text: "讀取檔案失敗" });
-      if (importInputRef.current) importInputRef.current.value = '';
-    };
-    r.readAsText(file);
-  };
+  const { handleExport, handleImport } = useImportExport({
+    exportData: {
+      weightLogs,
+      foodLogs,
+      activityLogs,
+      favoriteFoods,
+      waterLogs,
+      favoriteWaterContainers,
+      coachAdvice,
+      dailyTarget,
+      activityTarget,
+      waterTarget,
+      resistanceDefs,
+      resistanceLogs
+    },
+    importInputRef,
+    setStatusMessage,
+    getLocalISOString,
+    setWeightLogs,
+    setFoodLogs,
+    setActivityLogs,
+    setFavoriteFoods,
+    setWaterLogs,
+    setFavoriteWaterContainers,
+    setCoachAdvice,
+    setDailyTarget,
+    setActivityTarget,
+    setWaterTarget,
+    setResistanceDefs,
+    setResistanceLogs
+  });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -431,7 +339,7 @@ const App: React.FC = () => {
         return s;
       }).join('\n');
 
-      let prompt = PROMPTS.resistanceCalc.replace('{{weight}}', String(currentWeight)).replace('{{items}}', itemsList);
+      const prompt = PROMPTS.resistanceCalc.replace('{{weight}}', String(currentWeight)).replace('{{items}}', itemsList);
 
       const res = await callGeminiWithFallback(prompt, null, setAnalysisStatus, apiKeys);
 
@@ -465,40 +373,90 @@ const App: React.FC = () => {
     }
   };
 
+  const parseNumber = (
+    value: string,
+    label: string,
+    opts?: { min?: number; max?: number; required?: boolean }
+  ): number | null => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      if (opts?.required) alert(`${label}為必填`);
+      return opts?.required ? null : null;
+    }
+    const num = Number(trimmed);
+    if (!Number.isFinite(num)) {
+      alert(`${label}格式不正確`);
+      return null;
+    }
+    if (opts?.min !== undefined && num < opts.min) {
+      alert(`${label}不可小於 ${opts.min}`);
+      return null;
+    }
+    if (opts?.max !== undefined && num > opts.max) {
+      alert(`${label}不可大於 ${opts.max}`);
+      return null;
+    }
+    return num;
+  };
+
   const saveLog = (type: string) => {
     const now = Date.now();
     const logDate = currentViewDate || getLocalISOString();
 
     if (type === 'manual') {
-      if (!manualForm.name || !manualForm.val1) { alert("請填寫完整資訊"); return; }
+      if (!manualForm.name.trim()) { alert("請填寫名稱"); return; }
+      if (!manualForm.val1.trim()) { alert("請填寫完整資訊"); return; }
 
       if (inputModalType === 'food') {
-        const foodItem = { foodName: manualForm.name, calories: parseInt(manualForm.val1), protein: parseInt(manualForm.val2 || '0'), carbs: parseInt(manualForm.val3 || '0'), fat: parseInt(manualForm.val4 || '0') };
+        const calories = parseNumber(manualForm.val1, '熱量', { min: 0, required: true });
+        const protein = parseNumber(manualForm.val2 || '0', '蛋白質', { min: 0 }) ?? 0;
+        const carbs = parseNumber(manualForm.val3 || '0', '碳水', { min: 0 }) ?? 0;
+        const fat = parseNumber(manualForm.val4 || '0', '脂肪', { min: 0 }) ?? 0;
+        if (calories === null) return;
+        const foodItem = { foodName: manualForm.name.trim(), calories: Math.round(calories), protein: Math.round(protein), carbs: Math.round(carbs), fat: Math.round(fat) };
         if (addToFavorites) {
           setFavoriteFoods(prev => [{ id: now + 1, ...foodItem }, ...prev]);
         }
         setFoodLogs(p => [{ id: now, date: logDate, type: 'food', ...foodItem, isManual: true }, ...p]);
       } else if (inputModalType === 'water') {
         const linkId = now;
-        const wCals = parseInt(manualForm.val2 || '0') || 0;
-        const wPro = parseInt(manualForm.val3 || '0') || 0;
-        const wCarbs = parseInt(manualForm.val4 || '0') || 0;
+        const amount = parseNumber(manualForm.val1, '水量', { min: 1, required: true });
+        const wCals = parseNumber(manualForm.val2 || '0', '熱量', { min: 0 }) ?? 0;
+        const wPro = parseNumber(manualForm.val3 || '0', '蛋白質', { min: 0 }) ?? 0;
+        const wCarbs = parseNumber(manualForm.val4 || '0', '碳水', { min: 0 }) ?? 0;
+        if (amount === null) return;
         const isCaloric = wCals > 0;
 
-        setWaterLogs(p => [{ id: now, linkId: isCaloric ? linkId : undefined, date: logDate, type: 'water', beverageName: manualForm.name, amount: parseInt(manualForm.val1), isManual: true, isHidden: isCaloric }, ...p]);
+        setWaterLogs(p => [{ id: now, linkId: isCaloric ? linkId : undefined, date: logDate, type: 'water', beverageName: manualForm.name.trim(), amount: Math.round(amount), isManual: true, isHidden: isCaloric }, ...p]);
 
         if (addToFavorites) {
           setFavoriteWaterContainers(prev => [{
-            id: now + 1, beverageName: manualForm.name, amount: parseInt(manualForm.val1),
-            calories: wCals, protein: wPro, carbs: wCarbs, fat: 0
+            id: now + 1, beverageName: manualForm.name.trim(), amount: Math.round(amount),
+            calories: Math.round(wCals), protein: Math.round(wPro), carbs: Math.round(wCarbs), fat: 0
           }, ...prev]);
         }
 
         if (isCaloric) {
-          setFoodLogs(p => [{ id: now + 2, linkId: linkId, date: logDate, type: 'food', foodName: manualForm.name, calories: wCals, protein: wPro, carbs: wCarbs, fat: 0, amount: parseInt(manualForm.val1), portion: 1, isManual: true }, ...p]);
+          setFoodLogs(p => [{
+            id: now + 2,
+            linkId: linkId,
+            date: logDate,
+            type: 'food',
+            foodName: manualForm.name.trim(),
+            calories: Math.round(wCals),
+            protein: Math.round(wPro),
+            carbs: Math.round(wCarbs),
+            fat: 0,
+            amount: Math.round(amount),
+            portion: 1,
+            isManual: true
+          }, ...p]);
         }
       } else {
-        setActivityLogs(p => [{ id: now, date: logDate, type: 'activity', activityName: manualForm.name, activeCalories: parseInt(manualForm.val1), exerciseMinutes: parseInt(manualForm.val2 || '0'), isManual: true }, ...p]);
+        const activeCalories = parseNumber(manualForm.val1, '消耗熱量', { min: 0, required: true });
+        const minutes = parseNumber(manualForm.val2 || '0', '運動分鐘數', { min: 0 }) ?? 0;
+        if (activeCalories === null) return;
+        setActivityLogs(p => [{ id: now, date: logDate, type: 'activity', activityName: manualForm.name.trim(), activeCalories: Math.round(activeCalories), exerciseMinutes: Math.round(minutes), isManual: true }, ...p]);
       }
       setInputModalType(null);
     }
@@ -589,13 +547,26 @@ const App: React.FC = () => {
 
   const handleWeightSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputWeight) return;
+    if (!inputWeight.trim()) { alert("請輸入體重"); return; }
+    const weight = parseNumber(inputWeight, '體重', { min: 1, required: true });
+    if (weight === null) return;
+    const bodyFat = inputBodyFat.trim() ? parseNumber(inputBodyFat, '體脂', { min: 0, max: 100 }) : null;
+    if (bodyFat === null && inputBodyFat.trim()) return;
+    const muscle = inputMuscle.trim() ? parseNumber(inputMuscle, '肌肉率', { min: 0, max: 100 }) : null;
+    if (muscle === null && inputMuscle.trim()) return;
+    const visceral = inputVisceral.trim() ? parseNumber(inputVisceral, '內臟脂肪', { min: 0 }) : null;
+    if (visceral === null && inputVisceral.trim()) return;
+    const dose = inputDose.trim() ? parseNumber(inputDose, '劑量', { min: 0.01 }) : null;
+    if (dose === null && inputDose.trim()) return;
     const newLog: WeightLog = {
-      id: Date.now(), date: inputDate, weight: parseFloat(inputWeight),
-      bodyFat: inputBodyFat ? parseFloat(inputBodyFat) : undefined,
-      muscle: inputMuscle ? parseFloat(inputMuscle) : undefined,
-      visceral: inputVisceral ? parseFloat(inputVisceral) : undefined,
-      dose: inputDose, notes: inputNotes
+      id: Date.now(),
+      date: inputDate,
+      weight: parseFloat(weight.toFixed(1)),
+      bodyFat: bodyFat !== null ? parseFloat(bodyFat.toFixed(1)) : undefined,
+      muscle: muscle !== null ? parseFloat(muscle.toFixed(1)) : undefined,
+      visceral: visceral !== null ? parseFloat(visceral.toFixed(1)) : undefined,
+      dose: dose !== null ? String(dose) : inputDose,
+      notes: inputNotes
     };
     setWeightLogs(prev => [newLog, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     setInputWeight(''); setInputBodyFat(''); setInputMuscle(''); setInputVisceral(''); setInputNotes('');
@@ -634,6 +605,10 @@ const App: React.FC = () => {
 
   // 確認快速加水
   const confirmQuickWater = (amount: number) => {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert("飲水量需大於 0");
+      return;
+    }
     const logDate = currentViewDate || getLocalISOString();
     const now = Date.now();
     setWaterLogs(prev => [{
@@ -791,7 +766,7 @@ const App: React.FC = () => {
 
       {/* Header */}
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.7.0</span></h1>
+        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.0</span></h1>
         <div className="flex gap-3">
           <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
           <button onClick={handleExport} className="flex flex-col items-center text-neutral-500 hover:text-teal-400"><Icons.Download /><span className="text-[10px] font-bold">BACKUP</span></button>

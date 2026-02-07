@@ -6,7 +6,13 @@ module.exports = {
         'plugin:@typescript-eslint/recommended',
         'plugin:react-hooks/recommended',
     ],
-    ignorePatterns: ['dist', '.eslintrc.cjs'],
+    ignorePatterns: [
+        'dist',
+        '.eslintrc.cjs',
+        'Time_Machine/**',
+        'Health 1.4.0_20260111/**',
+        'Health v1.5.0 (Final)/**'
+    ],
     parser: '@typescript-eslint/parser',
     plugins: ['react-refresh'],
     rules: {
