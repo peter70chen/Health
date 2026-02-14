@@ -1,4 +1,4 @@
-# Health Plan v1.8.0
+# Health Plan v1.8.5
 
 智能熱量與運動追蹤應用程式，由 Gemini AI 驅動。
 

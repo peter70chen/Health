@@ -92,9 +92,10 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
         <div className="flex items-center gap-4">
           <CircularProgress remaining={remaining} total={dailyTarget} />
           <div>
-            <div className="text-sm text-neutral-400 font-bold">今日剩餘額度</div>
-            <div className={`text-3xl font-extrabold tracking-tight ${remaining < 0 ? 'text-red-500' : 'text-white'}`}>
-              {remaining} <span className="text-lg font-bold text-neutral-500">KCAL</span>
+            <div className="text-sm text-neutral-400 font-bold mb-1">今日剩餘額度</div>
+            <div className="flex gap-3 text-xs font-bold">
+              <span className="text-orange-400">攝取 {dailyFood.cal}</span>
+              <span className="text-teal-400">消耗 {dailyAct.cal + dailyRes.cal}</span>
             </div>
           </div>
         </div>

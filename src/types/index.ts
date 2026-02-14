@@ -157,7 +157,7 @@ export interface ManualFormState {
 // Confirm Modal State
 export interface ConfirmModalState {
     id: number;
-    type: 'food' | 'activity' | 'water' | 'weight' | 'resistanceDef' | 'resistanceLog';
+    type: 'food' | 'activity' | 'water' | 'weight' | 'resistanceDef' | 'resistanceLog' | 'favoriteFood' | 'favoriteWaterContainer';
 }
 
 

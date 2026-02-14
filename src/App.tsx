@@ -211,6 +211,7 @@ const App: React.FC = () => {
   });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
     const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
@@ -510,13 +511,9 @@ const App: React.FC = () => {
   const deleteFavorite = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (inputModalType === 'water') {
-      if (confirm("確定刪除此常用容器？")) {
-        setFavoriteWaterContainers(prev => prev.filter(f => f.id !== id));
-      }
+      setConfirmModal({ id, type: 'favoriteWaterContainer' });
     } else {
-      if (confirm("確定刪除此常用食物？")) {
-        setFavoriteFoods(prev => prev.filter(f => f.id !== id));
-      }
+      setConfirmModal({ id, type: 'favoriteFood' });
     }
   };
 
@@ -570,7 +567,7 @@ const App: React.FC = () => {
     };
     setWeightLogs(prev => [newLog, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     setInputWeight(''); setInputBodyFat(''); setInputMuscle(''); setInputVisceral(''); setInputNotes('');
-    alert("已儲存");
+    setStatusMessage({ type: 'success', text: '體重資料已儲存！' });
   };
 
   const executeDelete = () => {
@@ -589,6 +586,12 @@ const App: React.FC = () => {
     }
     else if (type === 'resistanceLog') {
       setResistanceLogs(prev => prev.filter(l => l.id !== id));
+    }
+    else if (type === 'favoriteFood') {
+      setFavoriteFoods(prev => prev.filter(f => f.id !== id));
+    }
+    else if (type === 'favoriteWaterContainer') {
+      setFavoriteWaterContainers(prev => prev.filter(f => f.id !== id));
     }
     else {
       setWaterLogs(prev => prev.filter(item => !shouldDelete(item)));
@@ -623,11 +626,11 @@ const App: React.FC = () => {
   };
 
   const today = getLocalISOString();
-  const dailyFood = foodLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.calories || 0), pro: acc.pro + (c.protein || 0), carbs: acc.carbs + (c.carbs || 0), fat: acc.fat + (c.fat || 0) }), { cal: 0, pro: 0, carbs: 0, fat: 0 });
-  const dailyAct = activityLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.activeCalories || 0) }), { cal: 0 });
-  const dailyRes = resistanceLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.totalCalories || 0) }), { cal: 0 });
-  const dailyWater = waterLogs.filter(l => l.date === currentViewDate).reduce((s, i) => s + (i.amount || 0), 0);
-  const remaining = dailyTarget - dailyFood.cal + dailyAct.cal + dailyRes.cal;
+  const dailyFood = useMemo(() => foodLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.calories || 0), pro: acc.pro + (c.protein || 0), carbs: acc.carbs + (c.carbs || 0), fat: acc.fat + (c.fat || 0) }), { cal: 0, pro: 0, carbs: 0, fat: 0 }), [foodLogs, currentViewDate]);
+  const dailyAct = useMemo(() => activityLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.activeCalories || 0) }), { cal: 0 }), [activityLogs, currentViewDate]);
+  const dailyRes = useMemo(() => resistanceLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.totalCalories || 0) }), { cal: 0 }), [resistanceLogs, currentViewDate]);
+  const dailyWater = useMemo(() => waterLogs.filter(l => l.date === currentViewDate).reduce((s, i) => s + (i.amount || 0), 0), [waterLogs, currentViewDate]);
+  const remaining = useMemo(() => dailyTarget - dailyFood.cal + dailyAct.cal + dailyRes.cal, [dailyTarget, dailyFood.cal, dailyAct.cal, dailyRes.cal]);
   const currentWeight = weightLogs.length > 0 ? weightLogs[0].weight : CONFIG.START_W;
   const bmi = (currentWeight / ((CONFIG.HEIGHT / 100) ** 2)).toFixed(1);
 
@@ -687,9 +690,10 @@ const App: React.FC = () => {
     let totalBalance = 0;
     pastDates.forEach(date => {
       const a = activityLogs.filter(l => l.date === date).reduce((s, x) => s + (x.activeCalories || 0), 0);
-      if (a > 0) {
+      const r = resistanceLogs.filter(l => l.date === date).reduce((s, x) => s + (x.totalCalories || 0), 0);
+      if (a > 0 || r > 0) {
         const f = foodLogs.filter(l => l.date === date).reduce((s, x) => s + (x.calories || 0), 0);
-        totalBalance += ((a + dailyTarget) - f);
+        totalBalance += ((a + r + dailyTarget) - f);
       }
     });
     return totalBalance;
@@ -766,7 +770,7 @@ const App: React.FC = () => {
 
       {/* Header */}
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.0</span></h1>
+        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.5</span></h1>
         <div className="flex gap-3">
           <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
           <button onClick={handleExport} className="flex flex-col items-center text-neutral-500 hover:text-teal-400"><Icons.Download /><span className="text-[10px] font-bold">BACKUP</span></button>
@@ -822,7 +826,7 @@ const App: React.FC = () => {
         {activeTab === 'daily' && (
           <>
             {isViewingHistory && (
-              <div className="bg-yellow-900/30 border border-yellow-700 p-3 rounded-xl flex justify-between items-center animate-pulse relative mb-6">
+              <div className="bg-yellow-900/30 border border-yellow-700 p-3 rounded-xl flex justify-between items-center relative mb-6">
                 <span className="text-yellow-400 text-sm font-bold flex items-center gap-2"><Icons.History className="w-4 h-4" /> 正在檢視歷史紀錄：{currentViewDate}</span>
                 <div className="flex gap-2">
                   <button onClick={() => setCurrentViewDate(today)} className="bg-neutral-800 text-neutral-400 hover:text-white p-1.5 rounded-lg"><Icons.X className="w-4 h-4" /></button>
@@ -942,15 +946,17 @@ const App: React.FC = () => {
                   {pastDates.map(date => {
                     const f = foodLogs.filter(l => l.date === date).reduce((s, i) => s + (i.calories || 0), 0);
                     const a = activityLogs.filter(l => l.date === date).reduce((s, i) => s + (i.activeCalories || 0), 0);
-                    const net = (a + dailyTarget) - f;
-                    const hasResistance = resistanceLogs.some(l => l.date === date);
+                    const r = resistanceLogs.filter(l => l.date === date).reduce((s, i) => s + (i.totalCalories || 0), 0);
+                    const totalBurn = a + r;
+                    const net = (totalBurn + dailyTarget) - f;
+                    const hasResistance = r > 0 || resistanceLogs.some(l => l.date === date);
                     return (
                       <button key={date} onClick={() => setCurrentViewDate(date)} className="w-full bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center hover:bg-neutral-800 transition-colors">
                         <div className="flex items-center gap-2 w-28">
                           <div className="font-bold text-neutral-300 text-left whitespace-nowrap">{date}</div>
                           {hasResistance && <div className="text-teal-400 bg-teal-900/30 p-1 rounded-md" title="已完成阻力運動"><Icons.Dumbbell className="w-3.5 h-3.5" /></div>}
                         </div>
-                        <div className="flex gap-2 text-xs font-bold flex-1 justify-end items-center"><span className="text-orange-500 whitespace-nowrap">攝 {f}</span><span className="text-teal-500 whitespace-nowrap">消 {a} <span className="text-[10px] opacity-80">({a + dailyTarget})</span></span><span className={`${net >= 0 ? 'text-green-500' : 'text-red-500'} ml-1 whitespace-nowrap`}>{net > 0 ? '+' : ''}{net}</span></div>
+                        <div className="flex gap-2 text-xs font-bold flex-1 justify-end items-center"><span className="text-orange-500 whitespace-nowrap">攝 {f}</span><span className="text-teal-500 whitespace-nowrap">消 {totalBurn} <span className="text-[10px] opacity-80">({totalBurn + dailyTarget})</span></span><span className={`${net >= 0 ? 'text-green-500' : 'text-red-500'} ml-1 whitespace-nowrap`}>{net > 0 ? '+' : ''}{net}</span></div>
                         <Icons.ArrowLeft className="w-4 h-4 text-neutral-600 rotate-180 ml-2" />
                       </button>
                     );
