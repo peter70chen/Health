@@ -770,7 +770,7 @@ const App: React.FC = () => {
 
       {/* Header */}
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.5</span></h1>
+        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.6</span></h1>
         <div className="flex gap-3">
           <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
           <button onClick={handleExport} className="flex flex-col items-center text-neutral-500 hover:text-teal-400"><Icons.Download /><span className="text-[10px] font-bold">BACKUP</span></button>
@@ -950,11 +950,13 @@ const App: React.FC = () => {
                     const totalBurn = a + r;
                     const net = (totalBurn + dailyTarget) - f;
                     const hasResistance = r > 0 || resistanceLogs.some(l => l.date === date);
+                    const hasRunning = activityLogs.some(l => l.date === date && l.activityName === '每日消耗（含運動）');
                     return (
                       <button key={date} onClick={() => setCurrentViewDate(date)} className="w-full bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center hover:bg-neutral-800 transition-colors">
                         <div className="flex items-center gap-2 w-28">
                           <div className="font-bold text-neutral-300 text-left whitespace-nowrap">{date}</div>
                           {hasResistance && <div className="text-teal-400 bg-teal-900/30 p-1 rounded-md" title="已完成阻力運動"><Icons.Dumbbell className="w-3.5 h-3.5" /></div>}
+                          {hasRunning && <div className="text-blue-400 bg-blue-900/30 p-1 rounded-md" title="已完成跑步"><Icons.Running className="w-3.5 h-3.5" /></div>}
                         </div>
                         <div className="flex gap-2 text-xs font-bold flex-1 justify-end items-center"><span className="text-orange-500 whitespace-nowrap">攝 {f}</span><span className="text-teal-500 whitespace-nowrap">消 {totalBurn} <span className="text-[10px] opacity-80">({totalBurn + dailyTarget})</span></span><span className={`${net >= 0 ? 'text-green-500' : 'text-red-500'} ml-1 whitespace-nowrap`}>{net > 0 ? '+' : ''}{net}</span></div>
                         <Icons.ArrowLeft className="w-4 h-4 text-neutral-600 rotate-180 ml-2" />

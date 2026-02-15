@@ -229,6 +229,15 @@ export const Icons = {
         </svg>
     ),
 
+    Running: ({ className = "w-6 h-6" }: IconProps) => (
+        <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="13.5" cy="5.5" r="2.5" />
+            <path d="m7 21 3-7" />
+            <path d="m16 12-3 4-2-3-4 3" />
+            <path d="m21 17-4-5-3-1-2.5-4" />
+        </svg>
+    ),
+
     ChevronDown: ({ className = "w-5 h-5" }: IconProps) => (
         <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m6 9 6 6 6-6" />
