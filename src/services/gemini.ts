@@ -17,8 +17,8 @@ export const callGeminiWithFallback = async (
     const fetchGemini = async (key: string, typeLabel: string) => {
         if (updateStatus) updateStatus(`🔄 ${typeLabel}辨識中...`);
 
-        // Use Gemini 3.1 Pro (Preview) for best accuracy
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${key}`;
+        // Use Gemini 3 Flash (Preview)
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${key}`;
 
         const parts: any[] = [{ text: prompt }];
         if (base64Image) {
