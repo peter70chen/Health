@@ -59,7 +59,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <input type="number" value={waterTarget} onChange={e => setWaterTarget(Number(e.target.value))} className="w-full p-3 border rounded-lg text-sm bg-neutral-800 border-neutral-700 focus:border-blue-500 outline-none text-white" />
         </div>
         <div className="border-t border-neutral-700 pt-4">
-          <label className="block text-sm font-bold text-neutral-400 mb-2">Google Gemini API Keys</label>
+          <label className="block text-sm font-bold text-neutral-400 mb-2">
+            Google Gemini API Keys
+            <span className="block text-[10px] font-normal text-neutral-500 mt-1">
+              目前照片辨識模型：Gemini 3.1 Flash-Lite Preview
+            </span>
+          </label>
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="mb-2">
               <input type="password" value={apiKeys[`free${i}`]} onChange={e => setApiKeys(p => ({ ...p, [`free${i}`]: e.target.value }))} placeholder={`Free Key ${i}`} className="w-full p-2 border rounded-lg text-xs bg-neutral-800 border-neutral-700 focus:border-neutral-500 outline-none text-neutral-300" />
