@@ -67,6 +67,9 @@ type FileSystemFileHandleLike = {
   createWritable: () => Promise<FileSystemWritableFileStreamLike>;
 };
 
+const removeLegacyFoodWaterLogs = (logs: WaterLog[]): WaterLog[] =>
+  logs.filter(log => log.type !== 'food_water');
+
 export const useImportExport = ({
   exportData,
   importInputRef,
@@ -153,7 +156,7 @@ export const useImportExport = ({
           const f = get('foodLogs'); if (f) { setFoodLogs(sortByDateAndIdDesc(f)); importCount++; }
           const a = get('activityLogs'); if (a) { setActivityLogs(sortByDateAndIdDesc(a)); importCount++; }
           const ff = get('favoriteFoods'); if (ff) { setFavoriteFoods(ff); importCount++; }
-          const wl = get('waterLogs'); if (wl) { setWaterLogs(sortByDateAndIdDesc(wl)); importCount++; }
+          const wl = get('waterLogs'); if (wl) { setWaterLogs(sortByDateAndIdDesc(removeLegacyFoodWaterLogs(wl))); importCount++; }
           const fwc = get('favoriteWaterContainers'); if (fwc) { setFavoriteWaterContainers(fwc); importCount++; }
           const ca = get('coachAdvice'); if (ca) { setCoachAdvice(ca); importCount++; }
 

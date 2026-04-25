@@ -46,6 +46,9 @@ type PersistArgs = {
   resistanceLogs: ResistanceLog[];
 };
 
+const removeLegacyFoodWaterLogs = (logs: WaterLog[]): WaterLog[] =>
+  logs.filter(log => log.type !== 'food_water');
+
 export const useHydrateFromStorage = ({
   setWeightLogs,
   setFoodLogs,
@@ -67,7 +70,7 @@ export const useHydrateFromStorage = ({
     setFoodLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.FOOD_LOGS, [])));
     setActivityLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.ACTIVITY_LOGS, [])));
     setFavoriteFoods(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_FOODS, []));
-    setWaterLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.WATER_LOGS, [])));
+    setWaterLogs(sortByDateAndIdDesc(removeLegacyFoodWaterLogs(safeLoadFromStorage(STORAGE_KEYS.WATER_LOGS, []))));
     setFavoriteWaterContainers(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, []));
     setResistanceDefs(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_DEFS, []));
     setResistanceLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_LOGS, [])));
