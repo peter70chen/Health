@@ -473,11 +473,6 @@ const App: React.FC = () => {
 
       setFoodLogs(p => [{ ...analyzedFood, id: now, date: logDate, type: 'food', calories: finalCal, protein: finalPro, carbs: finalCarbs, fat: finalFat, portion: portion }, ...p]);
 
-      // Original: if (analyzedFood.amount > 0) - TypeScript requires null check
-      if ((analyzedFood.amount ?? 0) > 0) {
-        const waterAmt = Math.round((analyzedFood.amount ?? 0) * portion);
-        setWaterLogs(p => [{ id: now + 2, date: logDate, type: 'food_water', beverageName: analyzedFood.foodName, amount: waterAmt, calories: 0, isManual: false }, ...p]);
-      }
       setAnalyzedFood(null);
     }
     else if (type === 'activity' && analyzedActivity) {
@@ -649,8 +644,6 @@ const App: React.FC = () => {
   }, [foodLogs, currentViewDate]);
 
   const dailyWaterList = useMemo(() => {
-    // Include both regular water logs AND food_water logs (water from food items)
-    // Don't filter by isHidden for water display - we want to show all water intake
     return waterLogs
       .filter(l => l.date === currentViewDate)
       .sort((a, b) => {
@@ -778,7 +771,7 @@ const App: React.FC = () => {
 
       {/* Header */}
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.7</span></h1>
+        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.8</span></h1>
         <div className="flex gap-3">
           <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
           <button onClick={handleExport} className="flex flex-col items-center text-neutral-500 hover:text-teal-400"><Icons.Download /><span className="text-[10px] font-bold">BACKUP</span></button>
