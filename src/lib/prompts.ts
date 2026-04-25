@@ -40,6 +40,8 @@ export const PROMPTS = {
 
   waterImage: `你是一位營養師。請分析這張飲料/水杯圖片。1.辨識飲料種類(例如：開水、美式咖啡、拿鐵、茶、果汁)。2.估算液體容量(毫升 ml)。3.若為有熱量的飲料，請估算其熱量(kcal)與三大營養素(g)，若是白開水則數值為0。回傳純 JSON：{ "amount": 數字, "beverageName": "飲料名稱", "calories": 數字, "protein": 數字, "carbs": 數字, "fat": 數字, "notes": "簡短描述判斷依據。" }`,
 
+  waterText: `你是一位營養師。請分析這段飲料或飲水描述：「{{TEXT}}」。請辨識飲品名稱、估算容量(毫升 ml)。若為有熱量的飲料，請估算熱量(kcal)與三大營養素(g)；若是白開水或無糖茶等幾乎無熱量飲品，請回傳 0。回傳純 JSON：{ "amount": 數字, "beverageName": "飲料名稱", "calories": 數字, "protein": 數字, "carbs": 數字, "fat": 數字, "notes": "簡短描述判斷依據。" }`,
+
   coachReview: `你是一位熟悉 GLP-1/GIP 雙促效劑（如猛健樂 Mounjaro）的專業減重教練與營養師。
 用戶目前正在使用猛健樂，最新記錄到的劑量為 {{dose}} mg。
 請根據用戶最近 7 天的數據給予綜合建議：

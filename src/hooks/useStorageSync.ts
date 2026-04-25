@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { STORAGE_KEYS } from '../lib/config';
-import { safeLoadFromStorage } from '../lib/utils';
+import { safeLoadFromStorage, sortByDateAndIdDesc } from '../lib/utils';
 import type {
   ApiKeys,
   WeightLog,
@@ -46,9 +46,6 @@ type PersistArgs = {
   resistanceLogs: ResistanceLog[];
 };
 
-const sortByIdDesc = <T extends { id: number }>(arr: T[]): T[] =>
-  [...arr].sort((a, b) => (b.id || 0) - (a.id || 0));
-
 export const useHydrateFromStorage = ({
   setWeightLogs,
   setFoodLogs,
@@ -66,14 +63,14 @@ export const useHydrateFromStorage = ({
   setLoading
 }: LoadArgs) => {
   useEffect(() => {
-    setWeightLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.WEIGHT_LOGS, [])));
-    setFoodLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.FOOD_LOGS, [])));
-    setActivityLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.ACTIVITY_LOGS, [])));
+    setWeightLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.WEIGHT_LOGS, [])));
+    setFoodLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.FOOD_LOGS, [])));
+    setActivityLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.ACTIVITY_LOGS, [])));
     setFavoriteFoods(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_FOODS, []));
-    setWaterLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.WATER_LOGS, [])));
+    setWaterLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.WATER_LOGS, [])));
     setFavoriteWaterContainers(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, []));
     setResistanceDefs(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_DEFS, []));
-    setResistanceLogs(sortByIdDesc(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_LOGS, [])));
+    setResistanceLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_LOGS, [])));
 
     const ca = localStorage.getItem(STORAGE_KEYS.COACH_ADVICE);
     const dt = localStorage.getItem(STORAGE_KEYS.DAILY_TARGET);

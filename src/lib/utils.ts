@@ -21,6 +21,18 @@ export const safeLoadFromStorage = <T>(key: string, defaultValue: T): T => {
 };
 
 /**
+ * Sort records by date descending, then by id descending.
+ * This keeps the latest entry first even if older dates are added later.
+ */
+export const sortByDateAndIdDesc = <T extends { date: string; id: number }>(arr: T[]): T[] => {
+    return [...arr].sort((a, b) => {
+        const dateCompare = b.date.localeCompare(a.date);
+        if (dateCompare !== 0) return dateCompare;
+        return (b.id || 0) - (a.id || 0);
+    });
+};
+
+/**
  * Format date for display (M/D)
  */
 export const formatDateDisplay = (date: Date): string => {

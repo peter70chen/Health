@@ -1,4 +1,5 @@
 import { useCallback, type RefObject, type ChangeEvent } from 'react';
+import { sortByDateAndIdDesc } from '../lib/utils';
 import type {
   WeightLog,
   FoodLog,
@@ -148,16 +149,16 @@ export const useImportExport = ({
 
           let importCount = 0;
 
-          const w = get('weightLogs'); if (w) { setWeightLogs(w); importCount++; }
-          const f = get('foodLogs'); if (f) { setFoodLogs(f); importCount++; }
-          const a = get('activityLogs'); if (a) { setActivityLogs(a); importCount++; }
+          const w = get('weightLogs'); if (w) { setWeightLogs(sortByDateAndIdDesc(w)); importCount++; }
+          const f = get('foodLogs'); if (f) { setFoodLogs(sortByDateAndIdDesc(f)); importCount++; }
+          const a = get('activityLogs'); if (a) { setActivityLogs(sortByDateAndIdDesc(a)); importCount++; }
           const ff = get('favoriteFoods'); if (ff) { setFavoriteFoods(ff); importCount++; }
-          const wl = get('waterLogs'); if (wl) { setWaterLogs(wl); importCount++; }
+          const wl = get('waterLogs'); if (wl) { setWaterLogs(sortByDateAndIdDesc(wl)); importCount++; }
           const fwc = get('favoriteWaterContainers'); if (fwc) { setFavoriteWaterContainers(fwc); importCount++; }
           const ca = get('coachAdvice'); if (ca) { setCoachAdvice(ca); importCount++; }
 
           const rd = get('resistanceDefs'); if (rd) { setResistanceDefs(rd); importCount++; }
-          const rl = get('resistanceLogs'); if (rl) { setResistanceLogs(rl); importCount++; }
+          const rl = get('resistanceLogs'); if (rl) { setResistanceLogs(sortByDateAndIdDesc(rl)); importCount++; }
 
           const dt = get('dailyTarget'); if (dt !== undefined) { setDailyTarget(dt); importCount++; }
           const at = get('activityTarget'); if (at !== undefined) { setActivityTarget(at); importCount++; }

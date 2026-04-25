@@ -8,7 +8,7 @@ import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, Wei
 import { callGeminiWithFallback } from './services/gemini';
 import { PROMPTS } from './lib/prompts';
 import { CONFIG, STORAGE_KEYS } from './lib/config';
-import { getLocalISOString } from './lib/utils';
+import { getLocalISOString, sortByDateAndIdDesc } from './lib/utils';
 import { useAutoClearStatus } from './hooks/useStatusMessage';
 import { useImportExport } from './hooks/useImportExport';
 import { useHydrateFromStorage, usePersistToStorage } from './hooks/useStorageSync';
@@ -238,7 +238,7 @@ const App: React.FC = () => {
       } else {
         if (!manualText.trim()) { alert("請輸入描述"); setIsAnalyzing(false); return; }
         if (currentType === 'water') {
-          prompt = PROMPTS.foodText.replace('{{TEXT}}', manualText);
+          prompt = PROMPTS.waterText.replace('{{TEXT}}', manualText);
         } else {
           prompt = (currentType === 'food' ? PROMPTS.foodText : PROMPTS.activityText).replace('{{TEXT}}', manualText);
         }
@@ -269,13 +269,14 @@ const App: React.FC = () => {
       const recentActivity = activityLogs.filter(l => new Date(l.date) >= sevenDaysAgo);
       const totalIn = recentFood.reduce((s, i) => s + (i.calories || 0), 0);
       const totalOut = recentActivity.reduce((s, i) => s + (i.activeCalories || 0), 0);
-      const startW = recentWeights.length > 0 ? recentWeights[0].weight : (weightLogs[0]?.weight || CONFIG.START_W);
+      const latestWeightLog = sortByDateAndIdDesc(weightLogs)[0];
+      const startW = recentWeights.length > 0 ? recentWeights[0].weight : (latestWeightLog?.weight || CONFIG.START_W);
       const endW = recentWeights.length > 0 ? recentWeights[recentWeights.length - 1].weight : startW;
       const currentDose = (() => {
         const hasDose = (d: string | undefined) => d !== undefined && d !== null && String(d).trim() !== '';
         const doseInRange = recentWeights.slice().reverse().find(l => hasDose(l.dose));
         if (doseInRange) return doseInRange.dose;
-        const anyDose = weightLogs.find(l => hasDose(l.dose));
+        const anyDose = sortByDateAndIdDesc(weightLogs).find(l => hasDose(l.dose));
         return anyDose ? anyDose.dose : '未知';
       })();
       const prompt = PROMPTS.coachReview
@@ -333,7 +334,7 @@ const App: React.FC = () => {
     setAnalysisStatus("AI 計算消耗中...");
 
     try {
-      const currentWeight = weightLogs[0]?.weight || CONFIG.START_W;
+      const currentWeight = sortByDateAndIdDesc(weightLogs)[0]?.weight || CONFIG.START_W;
       const itemsList = resistanceSession.map(i => {
         let s = `- ${i.name}: ${i.weight}kg, ${i.sets}組, ${i.reps}次`;
         if (i.time && i.time > 0) s += `, 每組${i.time}秒`;
@@ -565,7 +566,7 @@ const App: React.FC = () => {
       dose: dose !== null ? String(dose) : inputDose,
       notes: inputNotes
     };
-    setWeightLogs(prev => [newLog, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    setWeightLogs(prev => sortByDateAndIdDesc([newLog, ...prev]));
     setInputWeight(''); setInputBodyFat(''); setInputMuscle(''); setInputVisceral(''); setInputNotes('');
     setStatusMessage({ type: 'success', text: '體重資料已儲存！' });
   };
@@ -626,12 +627,13 @@ const App: React.FC = () => {
   };
 
   const today = getLocalISOString();
+  const latestWeightLog = useMemo(() => sortByDateAndIdDesc(weightLogs)[0], [weightLogs]);
   const dailyFood = useMemo(() => foodLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.calories || 0), pro: acc.pro + (c.protein || 0), carbs: acc.carbs + (c.carbs || 0), fat: acc.fat + (c.fat || 0) }), { cal: 0, pro: 0, carbs: 0, fat: 0 }), [foodLogs, currentViewDate]);
   const dailyAct = useMemo(() => activityLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.activeCalories || 0) }), { cal: 0 }), [activityLogs, currentViewDate]);
   const dailyRes = useMemo(() => resistanceLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.totalCalories || 0) }), { cal: 0 }), [resistanceLogs, currentViewDate]);
   const dailyWater = useMemo(() => waterLogs.filter(l => l.date === currentViewDate).reduce((s, i) => s + (i.amount || 0), 0), [waterLogs, currentViewDate]);
   const remaining = useMemo(() => dailyTarget - dailyFood.cal + dailyAct.cal + dailyRes.cal, [dailyTarget, dailyFood.cal, dailyAct.cal, dailyRes.cal]);
-  const currentWeight = weightLogs.length > 0 ? weightLogs[0].weight : CONFIG.START_W;
+  const currentWeight = latestWeightLog?.weight || CONFIG.START_W;
   const bmi = (currentWeight / ((CONFIG.HEIGHT / 100) ** 2)).toFixed(1);
 
   // Separate lists for each category, sorted by ID descending (newest first)
@@ -674,17 +676,21 @@ const App: React.FC = () => {
       activityName: '阻力運動 (總計)',
       activeCalories: resTotal,
       isManual: false,
-      _source: 'activity' as const
+      _source: 'resistance' as const
     }] : [];
 
     return [...activities, ...resItem].sort((a, b) => b.id - a.id);
   }, [activityLogs, resistanceLogs, currentViewDate]);
 
   const pastDates = useMemo(() => {
-    const allDates = new Set([...(foodLogs || []).map(l => l.date), ...(activityLogs || []).map(l => l.date)]);
+    const allDates = new Set([
+      ...(foodLogs || []).map(l => l.date),
+      ...(activityLogs || []).map(l => l.date),
+      ...(resistanceLogs || []).map(l => l.date)
+    ]);
     const sorted = Array.from(allDates).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
     return sorted.filter(d => d !== today).slice(0, 7);
-  }, [foodLogs, activityLogs, today]);
+  }, [foodLogs, activityLogs, resistanceLogs, today]);
 
   const thirtyDayBalance = useMemo(() => {
     let totalBalance = 0;
@@ -697,7 +703,7 @@ const App: React.FC = () => {
       }
     });
     return totalBalance;
-  }, [foodLogs, activityLogs, dailyTarget, pastDates]);
+  }, [foodLogs, activityLogs, resistanceLogs, dailyTarget, pastDates]);
 
   const trendData = useMemo((): ChartData[] => {
     const arr: ChartData[] = [];
@@ -740,7 +746,9 @@ const App: React.FC = () => {
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       totalDaysInRange++;
       const dateStr = getLocalISOString(d);
-      const dailyBurn = (activityLogs || []).filter(l => l.date === dateStr).reduce((s, x) => s + (x.activeCalories || 0), 0);
+      const dailyActivityBurn = (activityLogs || []).filter(l => l.date === dateStr).reduce((s, x) => s + (x.activeCalories || 0), 0);
+      const dailyResistanceBurn = (resistanceLogs || []).filter(l => l.date === dateStr).reduce((s, x) => s + (x.totalCalories || 0), 0);
+      const dailyBurn = dailyActivityBurn + dailyResistanceBurn;
       if (dailyBurn > 0) {
         validDays++;
         const dailyIntake = (foodLogs || []).filter(l => l.date === dateStr).reduce((s, x) => s + (x.calories || 0), 0);
@@ -750,7 +758,7 @@ const App: React.FC = () => {
     const totalBase = dailyTarget * validDays;
     const netBalance = (totalOut + totalBase) - totalIn;
     return { totalIn, totalOut, netBalance, validDays, totalDaysInRange };
-  }, [historyStartDate, historyEndDate, foodLogs, activityLogs, dailyTarget]);
+  }, [historyStartDate, historyEndDate, foodLogs, activityLogs, resistanceLogs, dailyTarget]);
 
   const currentWeightRecord = weightLogs.find(l => l.date === weightHistoryDate);
 
@@ -770,7 +778,7 @@ const App: React.FC = () => {
 
       {/* Header */}
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.6</span></h1>
+        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.7</span></h1>
         <div className="flex gap-3">
           <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
           <button onClick={handleExport} className="flex flex-col items-center text-neutral-500 hover:text-teal-400"><Icons.Download /><span className="text-[10px] font-bold">BACKUP</span></button>

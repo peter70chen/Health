@@ -5,7 +5,7 @@ import type { FoodLog, ActivityLog, WaterLog, ConfirmModalState } from '../../ty
 interface DailyListProps {
   foodList: FoodLog[];
   waterList: WaterLog[];
-  activityList: (ActivityLog & { _source?: 'activity' })[];
+  activityList: (ActivityLog & { _source?: 'activity' | 'resistance' })[];
   setConfirmModal: (modal: ConfirmModalState | null) => void;
 }
 
@@ -160,7 +160,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setConfirmModal({ id: l.id, type: 'activity' })} className="text-neutral-600 p-2 hover:text-red-500 active:scale-90 transition-transform">
+                <button onClick={() => setConfirmModal({ id: l.id, type: l._source === 'resistance' ? 'resistanceLog' : 'activity' })} className="text-neutral-600 p-2 hover:text-red-500 active:scale-90 transition-transform">
                   <Icons.Trash className="w-4 h-4" />
                 </button>
               </div>
