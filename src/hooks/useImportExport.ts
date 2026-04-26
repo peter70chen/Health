@@ -6,6 +6,7 @@ import {
   sanitizeFoodLogs,
   sanitizeWaterLogs
 } from '../lib/dataSanitizers';
+import { downloadJsonFile } from '../lib/download';
 import { sortByDateAndIdDesc } from '../lib/utils';
 import type {
   WeightLog,
@@ -146,14 +147,7 @@ export const useImportExport = ({
         // fallback to download
       }
     }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadJsonFile(filename, sanitizedExportData);
     setStatusMessage({ type: 'success', text: '備份已下載' });
   }, [exportData, getLocalISOString, setStatusMessage]);
 

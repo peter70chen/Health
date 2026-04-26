@@ -2,14 +2,19 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Icons } from './components/Icons';
 import { TrendChart } from './components/charts/TrendChart';
 import { WeightChart } from './components/charts/WeightChart';
-import { InputModal, SettingsPanel, ConfirmModal, TargetModal, AnalysisResult } from './components/modals';
+import { InputModal, SettingsPanel, ConfirmModal, TargetModal, AnalysisResult, DataHealthPanel } from './components/modals';
 import { QuickWaterModal } from './components/modals/QuickWaterModal';
 import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, WeightForm, WeightList, WeightHistory } from './components/tabs';
 import { callGeminiWithFallback } from './services/gemini';
+import { getActivityWarnings, getFoodWarnings, getWaterWarnings } from './lib/analysisWarnings';
+import { getDataHealthIssues } from './lib/dataHealth';
 import { PROMPTS } from './lib/prompts';
 import { CONFIG, STORAGE_KEYS } from './lib/config';
 import { removeTransientImagePreview } from './lib/dataSanitizers';
+import { downloadJsonFile } from './lib/download';
+import { buildTrainingExport } from './lib/trainingExport';
 import { getLocalISOString, sortByDateAndIdDesc } from './lib/utils';
+import { APP_DISPLAY_VERSION } from './lib/version';
 import { useAutoClearStatus } from './hooks/useStatusMessage';
 import { useImportExport } from './hooks/useImportExport';
 import { useHydrateFromStorage, usePersistToStorage } from './hooks/useStorageSync';
@@ -31,54 +36,12 @@ type LinkedLogItem = {
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '未知錯誤';
 
-const getFoodWarnings = (food: AnalyzedFood): string[] => {
-  const warnings: string[] = [];
-  const calories = food.calories || 0;
-  const protein = food.protein || 0;
-  const carbs = food.carbs || 0;
-  const fat = food.fat || 0;
-
-  if (!food.foodName?.trim()) warnings.push('AI 沒有明確辨識出食物名稱，儲存前請先確認。');
-  if (calories <= 0) warnings.push('熱量看起來是 0 或缺漏，請確認是否合理。');
-  if (calories > 1500) warnings.push('這筆食物熱量偏高，可能是份量或辨識結果被高估。');
-  if ((protein + carbs + fat) <= 0) warnings.push('營養素資料缺漏，蛋白質、碳水或脂肪可能需要手動修正。');
-  if ((protein * 4 + carbs * 4 + fat * 9) > calories * 1.6 && calories > 0) {
-    warnings.push('營養素換算熱量和總熱量差距偏大，建議確認數字。');
-  }
-
-  return warnings;
-};
-
-const getActivityWarnings = (activity: AnalyzedActivity): string[] => {
-  const warnings: string[] = [];
-  const calories = activity.activeCalories || 0;
-  const minutes = activity.exerciseMinutes || 0;
-
-  if (calories <= 0) warnings.push('運動消耗熱量看起來是 0 或缺漏，請確認。');
-  if (calories > 1500) warnings.push('這筆運動消耗偏高，可能需要確認運動強度或時間。');
-  if (minutes > 300) warnings.push('運動時間超過 5 小時，請確認是否被 AI 高估。');
-
-  return warnings;
-};
-
-const getWaterWarnings = (water: AnalyzedWater): string[] => {
-  const warnings: string[] = [];
-  const amount = water.amount || 0;
-  const calories = water.calories || 0;
-
-  if (!water.beverageName?.trim()) warnings.push('AI 沒有明確辨識出飲品名稱，儲存前請先確認。');
-  if (amount <= 0) warnings.push('飲水量看起來是 0 或缺漏，請確認。');
-  if (amount > 2000) warnings.push('單次飲水量超過 2000ml，可能是 AI 把容器或份量估太大。');
-  if (calories > 800) warnings.push('這杯飲品熱量偏高，若不是奶昔或含糖飲料，建議確認。');
-
-  return warnings;
-};
-
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'daily' | 'weight'>('daily');
   const [loading, setLoading] = useState(true);
   const [apiKeys, setApiKeys] = useState<ApiKeys>({ free1: '', free2: '', free3: '', free4: '', free5: '', paid: '' });
   const [showSettings, setShowSettings] = useState(false);
+  const [showDataHealth, setShowDataHealth] = useState(false);
   const [trendRange, setTrendRange] = useState(7);
   const [weightRange, setWeightRange] = useState(7);
 
@@ -737,6 +700,13 @@ const App: React.FC = () => {
   const remaining = useMemo(() => dailyTarget - dailyFood.cal + dailyAct.cal + dailyRes.cal, [dailyTarget, dailyFood.cal, dailyAct.cal, dailyRes.cal]);
   const currentWeight = latestWeightLog?.weight || CONFIG.START_W;
   const bmi = (currentWeight / ((CONFIG.HEIGHT / 100) ** 2)).toFixed(1);
+  const dataHealthIssues = useMemo(() => getDataHealthIssues({
+    weightLogs,
+    foodLogs,
+    activityLogs,
+    waterLogs,
+    resistanceLogs
+  }), [weightLogs, foodLogs, activityLogs, waterLogs, resistanceLogs]);
 
   // Separate lists for each category, sorted by ID descending (newest first)
   const dailyFoodList = useMemo(() => {
@@ -862,6 +832,29 @@ const App: React.FC = () => {
 
   const currentWeightRecord = weightLogs.find(l => l.date === weightHistoryDate);
 
+  const handleTrainingExport = () => {
+    if (!historyStartDate || !historyEndDate) {
+      setStatusMessage({ type: 'error', text: '請先選擇訓練資料的起訖日期' });
+      return;
+    }
+    if (historyStartDate > historyEndDate) {
+      setStatusMessage({ type: 'error', text: '開始日期不可晚於結束日期' });
+      return;
+    }
+
+    const trainingExport = buildTrainingExport({
+      startDate: historyStartDate,
+      endDate: historyEndDate,
+      weightLogs,
+      activityLogs,
+      resistanceLogs
+    });
+
+    const filename = `PeterPlan_Training_${historyStartDate}_to_${historyEndDate}.json`;
+    downloadJsonFile(filename, trainingExport);
+    setStatusMessage({ type: 'success', text: '訓練分析資料已匯出' });
+  };
+
   if (loading) return <div className="flex h-screen items-center justify-center text-neutral-400 bg-black">Loading...</div>;
   const hasAnyKey = apiKeys.free1 || apiKeys.free2 || apiKeys.free3 || apiKeys.free4 || apiKeys.free5 || apiKeys.paid;
   const isViewingHistory = currentViewDate !== today;
@@ -878,13 +871,21 @@ const App: React.FC = () => {
 
       {/* Header */}
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v2.0</span></h1>
-        <div className="flex gap-3">
+        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">{APP_DISPLAY_VERSION}</span></h1>
+        <div className="flex gap-2">
           <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
+          <button onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center hover:text-teal-400 ${dataHealthIssues.length > 0 ? 'text-amber-400' : 'text-neutral-500'}`}><Icons.ScanEye /><span className="text-[10px] font-bold">CHECK</span></button>
+          <button onClick={handleTrainingExport} className="flex flex-col items-center text-teal-400 hover:text-teal-300"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold">TRAIN</span></button>
           <button onClick={handleExport} className="flex flex-col items-center text-neutral-500 hover:text-teal-400"><Icons.Download /><span className="text-[10px] font-bold">BACKUP</span></button>
           <div className="relative flex flex-col items-center text-neutral-500 hover:text-teal-400 cursor-pointer"><Icons.Upload /><span className="text-[10px] font-bold">RESTORE</span><input type="file" ref={importInputRef} onChange={handleImport} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".json" /></div>
         </div>
       </div>
+
+      <DataHealthPanel
+        showDataHealth={showDataHealth}
+        setShowDataHealth={setShowDataHealth}
+        issues={dataHealthIssues}
+      />
 
       {/* Settings Panel */}
       <SettingsPanel
@@ -1077,8 +1078,19 @@ const App: React.FC = () => {
 
             {/* History Query */}
             <div className="mt-8 pb-8">
-              <h3 className="font-bold text-neutral-400 text-sm mb-3 pl-1 flex items-center gap-2"><Icons.Calendar className="w-4 h-4" /> 歷史查詢</h3>
+              <div className="flex items-center justify-between mb-3 pl-1 gap-3">
+                <h3 className="font-bold text-neutral-400 text-sm flex items-center gap-2"><Icons.Calendar className="w-4 h-4" /> 歷史查詢</h3>
+                <button onClick={handleTrainingExport} className="text-xs font-bold text-teal-300 bg-teal-900/30 px-3 py-2 rounded-lg border border-teal-800 flex items-center gap-1 hover:bg-teal-900/50 transition-colors">
+                  <Icons.Download className="w-3.5 h-3.5" /> 匯出訓練資料
+                </button>
+              </div>
               <div className="bg-neutral-900 p-3 rounded-xl border border-neutral-800 overflow-hidden w-full box-border">
+                <button onClick={handleTrainingExport} className="w-full mb-4 bg-teal-600 text-white rounded-xl py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all hover:bg-teal-500">
+                  <Icons.Dumbbell className="w-4 h-4" /> 匯出這段期間的訓練與身體資料
+                </button>
+                <p className="text-[11px] text-neutral-500 mb-4 leading-relaxed">
+                  會依下方日期範圍匯出體重、體脂、肌肉、內臟脂肪、一般運動、阻力訓練與每日摘要，方便交給 AI 分析。
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 w-full">
                   <div className="w-full relative"><span className="absolute top-[-8px] left-2 text-[10px] text-neutral-500 bg-neutral-900 px-1 z-20">開始日期</span><div className="relative w-full"><input type="date" value={historyStartDate} onChange={(e) => setHistoryStartDate(e.target.value)} className="w-full min-w-0 bg-transparent text-white border border-neutral-700 rounded-lg p-3 text-sm font-bold outline-none focus:border-teal-500 pr-10 box-border" /><Icons.Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-white w-4 h-4 pointer-events-none" /></div></div>
                   <div className="w-full relative"><span className="absolute top-[-8px] left-2 text-[10px] text-neutral-500 bg-neutral-900 px-1 z-20">結束日期</span><div className="relative w-full"><input type="date" value={historyEndDate} onChange={(e) => setHistoryEndDate(e.target.value)} className="w-full min-w-0 bg-transparent text-white border border-neutral-700 rounded-lg p-3 text-sm font-bold outline-none focus:border-teal-500 pr-10 box-border" /><Icons.Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-white w-4 h-4 pointer-events-none" /></div></div>
