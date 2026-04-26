@@ -31,6 +31,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 }) => {
   if (!analyzedFood && !analyzedActivity && !analyzedWater) return null;
 
+  const warnings = analyzedFood?.warnings || analyzedActivity?.warnings || analyzedWater?.warnings || [];
+
   return (
     <div className="bg-neutral-900 border-2 border-teal-500 p-5 rounded-2xl shadow-xl animate-fadeIn relative">
       <div className="absolute -top-3 left-4 bg-teal-500 text-white text-xs px-3 py-1 rounded-full font-bold">AI 分析結果</div>
@@ -66,6 +68,28 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
       {analyzedFood && (
         <div className="bg-neutral-800/50 p-4 rounded-xl mb-4 border border-neutral-700">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <label className="col-span-2 text-xs font-bold text-neutral-400">
+              食物名稱
+              <input value={analyzedFood.foodName} onChange={e => setAnalyzedFood({ ...analyzedFood, foodName: e.target.value })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+            <label className="text-xs font-bold text-neutral-400">
+              熱量 kcal
+              <input type="number" value={analyzedFood.calories || ''} onChange={e => setAnalyzedFood({ ...analyzedFood, calories: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+            <label className="text-xs font-bold text-neutral-400">
+              蛋白 g
+              <input type="number" value={analyzedFood.protein || ''} onChange={e => setAnalyzedFood({ ...analyzedFood, protein: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+            <label className="text-xs font-bold text-neutral-400">
+              碳水 g
+              <input type="number" value={analyzedFood.carbs || ''} onChange={e => setAnalyzedFood({ ...analyzedFood, carbs: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+            <label className="text-xs font-bold text-neutral-400">
+              脂肪 g
+              <input type="number" value={analyzedFood.fat || ''} onChange={e => setAnalyzedFood({ ...analyzedFood, fat: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+          </div>
           <div className="flex justify-between items-center mb-2">
             <label className="font-bold text-neutral-300 text-sm">食用份量/比例</label>
             <span className="font-bold text-teal-400 text-lg">{portion} 份</span>
@@ -82,6 +106,24 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
       {analyzedWater && (
         <div className="bg-neutral-800/50 p-4 rounded-xl mb-4 border border-neutral-700">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <label className="text-xs font-bold text-neutral-400">
+              飲品名稱
+              <input value={analyzedWater.beverageName || ''} onChange={e => setAnalyzedWater({ ...analyzedWater, beverageName: e.target.value })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+            <label className="text-xs font-bold text-neutral-400">
+              容量 ml
+              <input type="number" value={analyzedWater.amount || ''} onChange={e => setAnalyzedWater({ ...analyzedWater, amount: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+            <label className="text-xs font-bold text-neutral-400">
+              熱量 kcal
+              <input type="number" value={analyzedWater.calories || ''} onChange={e => setAnalyzedWater({ ...analyzedWater, calories: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+            <label className="text-xs font-bold text-neutral-400">
+              碳水 g
+              <input type="number" value={analyzedWater.carbs || ''} onChange={e => setAnalyzedWater({ ...analyzedWater, carbs: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+            </label>
+          </div>
           <div className="flex justify-between items-center mb-2">
             <label className="font-bold text-neutral-300 text-sm">飲用份量/比例</label>
             <span className="font-bold text-teal-400 text-lg">{portion} 份</span>
@@ -98,6 +140,32 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <div className="w-1/4"><div className="text-xs text-neutral-400">脂肪</div><div className="text-base font-bold text-green-400">{Math.round((analyzedWater.fat || 0) * portion)}</div></div>
             </div>
           )}
+        </div>
+      )}
+
+      {analyzedActivity && (
+        <div className="bg-neutral-800/50 p-4 rounded-xl mb-4 border border-neutral-700 grid grid-cols-2 gap-3">
+          <label className="col-span-2 text-xs font-bold text-neutral-400">
+            運動名稱
+            <input value={analyzedActivity.activityName || ''} onChange={e => setAnalyzedActivity({ ...analyzedActivity, activityName: e.target.value })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+          </label>
+          <label className="text-xs font-bold text-neutral-400">
+            消耗 kcal
+            <input type="number" value={analyzedActivity.activeCalories || ''} onChange={e => setAnalyzedActivity({ ...analyzedActivity, activeCalories: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+          </label>
+          <label className="text-xs font-bold text-neutral-400">
+            時間 分鐘
+            <input type="number" value={analyzedActivity.exerciseMinutes || ''} onChange={e => setAnalyzedActivity({ ...analyzedActivity, exerciseMinutes: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" />
+          </label>
+        </div>
+      )}
+
+      {warnings.length > 0 && (
+        <div className="mb-4 p-4 bg-amber-950/40 border border-amber-500/40 rounded-xl text-sm text-amber-100 leading-relaxed">
+          <div className="font-bold text-amber-300 mb-2">儲存前請確認</div>
+          {warnings.map(warning => (
+            <div key={warning}>・{warning}</div>
+          ))}
         </div>
       )}
 

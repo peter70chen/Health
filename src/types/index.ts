@@ -98,6 +98,7 @@ export interface AnalyzedFood {
     notes?: string;
     imagePreview?: string;
     isText?: boolean;
+    warnings?: string[];
 }
 
 // Analyzed Activity Result
@@ -109,6 +110,7 @@ export interface AnalyzedActivity {
     notes?: string;
     imagePreview?: string;
     isText?: boolean;
+    warnings?: string[];
 }
 
 // Analyzed Water Result
@@ -122,6 +124,7 @@ export interface AnalyzedWater {
     notes?: string;
     imagePreview?: string;
     isText?: boolean;
+    warnings?: string[];
 }
 
 // Favorite Food Item

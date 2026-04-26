@@ -13,6 +13,7 @@ import {
   DragStartEvent,
   DragEndEvent,
   TouchSensor,
+  type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -55,7 +56,7 @@ interface InputModalProps {
   // Favorites
   favoriteFoods: FavoriteFood[];
   favoriteWaterContainers: FavoriteWaterContainer[];
-  selectFavorite: (item: any) => void;
+  selectFavorite: (item: FavoriteFood | FavoriteWaterContainer) => void;
   deleteFavorite: (id: number, e: React.MouseEvent) => void;
   reorderFavoriteFoods: (fromIndex: number, toIndex: number) => void;
   reorderFavoriteWaterContainers: (fromIndex: number, toIndex: number) => void;
@@ -72,7 +73,7 @@ interface InputModalProps {
   toggleResistanceItem: (def: ResistanceDef) => void;
   updateResistanceItem: (defId: number, field: 'weight' | 'sets' | 'reps' | 'time', value: string) => void;
   calculateAndSaveResistance: () => void;
-  setConfirmModal: (modal: { id: number; type: 'food' | 'activity' | 'water' | 'weight' | 'resistanceDef' | 'resistanceLog' } | null) => void;
+  setConfirmModal: (modal: { id: number; type: 'food' | 'activity' | 'water' | 'weight' | 'resistanceDef' | 'resistanceLog' | 'favoriteFood' | 'favoriteWaterContainer' } | null) => void;
   currentViewDate: string;
   getLocalISOString: (date?: Date) => string;
 }
@@ -122,7 +123,7 @@ export const InputModal: React.FC<InputModalProps> = ({
   getLocalISOString
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeItem, setActiveItem] = useState<any>(null);
+  const [activeItem, setActiveItem] = useState<FavoriteFood | FavoriteWaterContainer | ResistanceDef | null>(null);
 
   // Mobile.md #1: Sensors Customization - Removed delay/tolerance since we now use handlers
   const sensors = useSensors(
@@ -175,7 +176,7 @@ export const InputModal: React.FC<InputModalProps> = ({
     setActiveItem(null);
   };
 
-  const renderFoodItem = (fav: FavoriteFood, listeners?: any) => (
+  const renderFoodItem = (fav: FavoriteFood, listeners?: DraggableSyntheticListeners) => (
     <div className="bg-neutral-800 p-3 rounded-xl border border-neutral-700 flex justify-between items-center transition-all hover:bg-neutral-700 select-none">
       <div className="flex items-center gap-2">
         <div className="p-2 -ml-2 text-neutral-600 cursor-grab active:cursor-grabbing touch-none" {...listeners}>
@@ -194,7 +195,7 @@ export const InputModal: React.FC<InputModalProps> = ({
     </div>
   );
 
-  const renderWaterItem = (fav: FavoriteWaterContainer, listeners?: any) => (
+  const renderWaterItem = (fav: FavoriteWaterContainer, listeners?: DraggableSyntheticListeners) => (
     <div className="bg-neutral-800 p-3 rounded-xl border border-neutral-700 flex justify-between items-center transition-all hover:bg-neutral-700 select-none">
       <div className="flex items-center gap-2">
         <div className="p-2 -ml-2 text-neutral-600 cursor-grab active:cursor-grabbing touch-none" {...listeners}>
@@ -212,7 +213,7 @@ export const InputModal: React.FC<InputModalProps> = ({
     </div>
   );
 
-  const renderResistanceItem = (def: ResistanceDef, listeners?: any) => {
+  const renderResistanceItem = (def: ResistanceDef, listeners?: DraggableSyntheticListeners) => {
     const activeItem = resistanceSession.find(i => i.defId === def.id);
     const isChecked = !!activeItem;
     return (

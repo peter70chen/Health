@@ -1,0 +1,20 @@
+# Local Netlify folder
+.netlify
+
+# Local agent workspace files
+.agent/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Dependencies and build output
+node_modules/
+dist/
+
+# Local verification artifacts
+test-results/
+verification-results/
+
+# Archived local handover copies
+Health 1.4.0_20260111/

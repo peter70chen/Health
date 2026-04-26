@@ -55,12 +55,12 @@ const parseGeminiJson = (data: GeminiResponse): unknown => {
  * Call Gemini API with fallback to multiple keys
  * Tries free keys first, then falls back to paid key
  */
-export const callGeminiWithFallback = async (
+export const callGeminiWithFallback = async <T = Record<string, unknown>>(
     prompt: string,
     base64Image: string | null,
     updateStatus: ((status: string) => void) | null,
     apiKeys: ApiKeys
-): Promise<any> => {
+): Promise<T> => {
     if (!apiKeys.free1 && !apiKeys.free2 && !apiKeys.free3 && !apiKeys.free4 && !apiKeys.free5 && !apiKeys.paid) {
         throw new Error("請先點擊左上角 [SETTING] 設定 Google Gemini API Key");
     }
@@ -92,7 +92,7 @@ export const callGeminiWithFallback = async (
         const data = await response.json() as GeminiResponse;
         if (data.error) throw new Error(data.error.message);
 
-        return parseGeminiJson(data);
+        return parseGeminiJson(data) as T;
     };
 
     const tryKey = async (key: string | undefined, label: string) => {

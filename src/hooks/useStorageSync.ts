@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
 import { STORAGE_KEYS } from '../lib/config';
+import {
+  sanitizeActivityLogs,
+  sanitizeFavoriteFoods,
+  sanitizeFavoriteWaterContainers,
+  sanitizeFoodLogs,
+  sanitizeWaterLogs
+} from '../lib/dataSanitizers';
 import { safeLoadFromStorage, sortByDateAndIdDesc } from '../lib/utils';
 import type {
   ApiKeys,
@@ -46,9 +53,6 @@ type PersistArgs = {
   resistanceLogs: ResistanceLog[];
 };
 
-const removeLegacyFoodWaterLogs = (logs: WaterLog[]): WaterLog[] =>
-  logs.filter(log => log.type !== 'food_water');
-
 export const useHydrateFromStorage = ({
   setWeightLogs,
   setFoodLogs,
@@ -67,11 +71,11 @@ export const useHydrateFromStorage = ({
 }: LoadArgs) => {
   useEffect(() => {
     setWeightLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.WEIGHT_LOGS, [])));
-    setFoodLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.FOOD_LOGS, [])));
-    setActivityLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.ACTIVITY_LOGS, [])));
-    setFavoriteFoods(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_FOODS, []));
-    setWaterLogs(sortByDateAndIdDesc(removeLegacyFoodWaterLogs(safeLoadFromStorage(STORAGE_KEYS.WATER_LOGS, []))));
-    setFavoriteWaterContainers(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, []));
+    setFoodLogs(sortByDateAndIdDesc(sanitizeFoodLogs(safeLoadFromStorage(STORAGE_KEYS.FOOD_LOGS, []))));
+    setActivityLogs(sortByDateAndIdDesc(sanitizeActivityLogs(safeLoadFromStorage(STORAGE_KEYS.ACTIVITY_LOGS, []))));
+    setFavoriteFoods(sanitizeFavoriteFoods(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_FOODS, [])));
+    setWaterLogs(sortByDateAndIdDesc(sanitizeWaterLogs(safeLoadFromStorage(STORAGE_KEYS.WATER_LOGS, []))));
+    setFavoriteWaterContainers(sanitizeFavoriteWaterContainers(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, [])));
     setResistanceDefs(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_DEFS, []));
     setResistanceLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_LOGS, [])));
 
@@ -129,11 +133,11 @@ export const usePersistToStorage = ({
   useEffect(() => {
     if (loading) return;
     localStorage.setItem(STORAGE_KEYS.WEIGHT_LOGS, JSON.stringify(weightLogs));
-    localStorage.setItem(STORAGE_KEYS.FOOD_LOGS, JSON.stringify(foodLogs));
-    localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(activityLogs));
-    localStorage.setItem(STORAGE_KEYS.FAVORITE_FOODS, JSON.stringify(favoriteFoods));
-    localStorage.setItem(STORAGE_KEYS.WATER_LOGS, JSON.stringify(waterLogs));
-    localStorage.setItem(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, JSON.stringify(favoriteWaterContainers));
+    localStorage.setItem(STORAGE_KEYS.FOOD_LOGS, JSON.stringify(sanitizeFoodLogs(foodLogs)));
+    localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(sanitizeActivityLogs(activityLogs)));
+    localStorage.setItem(STORAGE_KEYS.FAVORITE_FOODS, JSON.stringify(sanitizeFavoriteFoods(favoriteFoods)));
+    localStorage.setItem(STORAGE_KEYS.WATER_LOGS, JSON.stringify(sanitizeWaterLogs(waterLogs)));
+    localStorage.setItem(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, JSON.stringify(sanitizeFavoriteWaterContainers(favoriteWaterContainers)));
     localStorage.setItem(STORAGE_KEYS.COACH_ADVICE, coachAdvice);
     localStorage.setItem(STORAGE_KEYS.DAILY_TARGET, dailyTarget.toString());
     localStorage.setItem(STORAGE_KEYS.ACTIVITY_TARGET, activityTarget.toString());

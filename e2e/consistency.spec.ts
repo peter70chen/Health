@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -20,7 +20,7 @@ test.describe('Consistency Verification', () => {
         await page.reload();
     });
 
-    const captureState = async (page: any, stepName: string) => {
+    const captureState = async (page: Page, stepName: string) => {
         // 1. Screenshot
         await page.screenshot({ path: path.join(OUTPUT_DIR, `${stepName}.png`), fullPage: true });
 
@@ -30,7 +30,6 @@ test.describe('Consistency Verification', () => {
 
         // 3. DOM Snapshot (Key Text Content)
         const domSnapshot = await page.evaluate(() => {
-            const getText = (sel) => document.querySelector(sel)?.innerText?.trim() || 'N/A';
             return {
                 title: document.title,
                 // Adjust selectors for specific elements if needed

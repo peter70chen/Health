@@ -1,4 +1,11 @@
 import { useCallback, type RefObject, type ChangeEvent } from 'react';
+import {
+  sanitizeActivityLogs,
+  sanitizeFavoriteFoods,
+  sanitizeFavoriteWaterContainers,
+  sanitizeFoodLogs,
+  sanitizeWaterLogs
+} from '../lib/dataSanitizers';
 import { sortByDateAndIdDesc } from '../lib/utils';
 import type {
   WeightLog,
@@ -67,8 +74,14 @@ type FileSystemFileHandleLike = {
   createWritable: () => Promise<FileSystemWritableFileStreamLike>;
 };
 
-const removeLegacyFoodWaterLogs = (logs: WaterLog[]): WaterLog[] =>
-  logs.filter(log => log.type !== 'food_water');
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+const getImportCount = (value: unknown): number =>
+  Array.isArray(value) ? value.length : 1;
+
+const getAbortName = (error: unknown): string | undefined =>
+  error instanceof DOMException ? error.name : undefined;
 
 export const useImportExport = ({
   exportData,
@@ -89,7 +102,15 @@ export const useImportExport = ({
   setResistanceLogs
 }: HookArgs) => {
   const handleExport = useCallback(async () => {
-    const data = JSON.stringify(exportData, null, 2);
+    const sanitizedExportData: ExportData = {
+      ...exportData,
+      foodLogs: sanitizeFoodLogs(exportData.foodLogs),
+      activityLogs: sanitizeActivityLogs(exportData.activityLogs),
+      favoriteFoods: sanitizeFavoriteFoods(exportData.favoriteFoods),
+      waterLogs: sanitizeWaterLogs(exportData.waterLogs),
+      favoriteWaterContainers: sanitizeFavoriteWaterContainers(exportData.favoriteWaterContainers)
+    };
+    const data = JSON.stringify(sanitizedExportData, null, 2);
     const filename = `PeterPlan_Backup_${getLocalISOString()}.json`;
 
     // Try File System Access API first (Desktop Chrome/Edge/Opera)
@@ -111,8 +132,8 @@ export const useImportExport = ({
         setStatusMessage({ type: 'success', text: '備份成功！' });
         return;
       }
-    } catch (err: any) {
-      if (err.name === 'AbortError') return;
+    } catch (err: unknown) {
+      if (getAbortName(err) === 'AbortError') return;
       console.error('File Picker failed, falling back:', err);
     }
 
@@ -145,27 +166,58 @@ export const useImportExport = ({
       r.onload = (ev) => {
         try {
           const rawData = ev.target?.result as string;
-          const d = JSON.parse(rawData);
+          const d = JSON.parse(rawData) as Record<string, unknown>;
 
           // Support both new keys and legacy mj_ keys
           const get = (key: string) => (d[key] !== undefined ? d[key] : d[`mj_${key}`]);
 
+          const summaryItems = [
+            ['體重', get('weightLogs')],
+            ['飲食', get('foodLogs')],
+            ['運動', get('activityLogs')],
+            ['常用食物', get('favoriteFoods')],
+            ['飲水', get('waterLogs')],
+            ['常用容器', get('favoriteWaterContainers')],
+            ['教練建議', get('coachAdvice')],
+            ['阻力項目', get('resistanceDefs')],
+            ['阻力紀錄', get('resistanceLogs')],
+            ['每日熱量目標', get('dailyTarget')],
+            ['每日運動目標', get('activityTarget')],
+            ['每日飲水目標', get('waterTarget')]
+          ].filter(([, value]) => value !== undefined);
+
+          if (summaryItems.length === 0) {
+            setStatusMessage({ type: 'error', text: '還原失敗：未能在檔案中找到有效的資料' });
+            return;
+          }
+
+          const summaryText = summaryItems
+            .map(([label, value]) => `${label}：${getImportCount(value)} 筆`)
+            .join('\n');
+          const confirmed = window.confirm(
+            `準備還原以下資料，這會取代 App 目前同類資料：\n\n${summaryText}\n\n確定要繼續嗎？`
+          );
+          if (!confirmed) {
+            setStatusMessage({ type: 'error', text: '已取消還原，現有資料沒有變動' });
+            return;
+          }
+
           let importCount = 0;
 
-          const w = get('weightLogs'); if (w) { setWeightLogs(sortByDateAndIdDesc(w)); importCount++; }
-          const f = get('foodLogs'); if (f) { setFoodLogs(sortByDateAndIdDesc(f)); importCount++; }
-          const a = get('activityLogs'); if (a) { setActivityLogs(sortByDateAndIdDesc(a)); importCount++; }
-          const ff = get('favoriteFoods'); if (ff) { setFavoriteFoods(ff); importCount++; }
-          const wl = get('waterLogs'); if (wl) { setWaterLogs(sortByDateAndIdDesc(removeLegacyFoodWaterLogs(wl))); importCount++; }
-          const fwc = get('favoriteWaterContainers'); if (fwc) { setFavoriteWaterContainers(fwc); importCount++; }
-          const ca = get('coachAdvice'); if (ca) { setCoachAdvice(ca); importCount++; }
+          const w = get('weightLogs') as WeightLog[] | undefined; if (w) { setWeightLogs(sortByDateAndIdDesc(w)); importCount++; }
+          const f = get('foodLogs') as FoodLog[] | undefined; if (f) { setFoodLogs(sortByDateAndIdDesc(sanitizeFoodLogs(f))); importCount++; }
+          const a = get('activityLogs') as ActivityLog[] | undefined; if (a) { setActivityLogs(sortByDateAndIdDesc(sanitizeActivityLogs(a))); importCount++; }
+          const ff = get('favoriteFoods') as FavoriteFood[] | undefined; if (ff) { setFavoriteFoods(sanitizeFavoriteFoods(ff)); importCount++; }
+          const wl = get('waterLogs') as WaterLog[] | undefined; if (wl) { setWaterLogs(sortByDateAndIdDesc(sanitizeWaterLogs(wl))); importCount++; }
+          const fwc = get('favoriteWaterContainers') as FavoriteWaterContainer[] | undefined; if (fwc) { setFavoriteWaterContainers(sanitizeFavoriteWaterContainers(fwc)); importCount++; }
+          const ca = get('coachAdvice'); if (typeof ca === 'string') { setCoachAdvice(ca); importCount++; }
 
-          const rd = get('resistanceDefs'); if (rd) { setResistanceDefs(rd); importCount++; }
-          const rl = get('resistanceLogs'); if (rl) { setResistanceLogs(sortByDateAndIdDesc(rl)); importCount++; }
+          const rd = get('resistanceDefs') as ResistanceDef[] | undefined; if (rd) { setResistanceDefs(rd); importCount++; }
+          const rl = get('resistanceLogs') as ResistanceLog[] | undefined; if (rl) { setResistanceLogs(sortByDateAndIdDesc(rl)); importCount++; }
 
-          const dt = get('dailyTarget'); if (dt !== undefined) { setDailyTarget(dt); importCount++; }
-          const at = get('activityTarget'); if (at !== undefined) { setActivityTarget(at); importCount++; }
-          const wt = get('waterTarget'); if (wt !== undefined) { setWaterTarget(wt); importCount++; }
+          const dt = get('dailyTarget') as number | undefined; if (dt !== undefined) { setDailyTarget(dt); importCount++; }
+          const at = get('activityTarget') as number | undefined; if (at !== undefined) { setActivityTarget(at); importCount++; }
+          const wt = get('waterTarget') as number | undefined; if (wt !== undefined) { setWaterTarget(wt); importCount++; }
 
           if (importCount > 0) {
             setStatusMessage({ type: 'success', text: `還原成功！已匯入 ${importCount} 類資料` });
@@ -174,7 +226,7 @@ export const useImportExport = ({
           }
         } catch (err) {
           console.error('Import parse error:', err);
-          setStatusMessage({ type: 'error', text: '格式錯誤: ' + (err instanceof Error ? err.message : String(err)) });
+          setStatusMessage({ type: 'error', text: '格式錯誤: ' + getErrorMessage(err) });
         }
 
         if (importInputRef.current) {

@@ -8,6 +8,7 @@ import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, Wei
 import { callGeminiWithFallback } from './services/gemini';
 import { PROMPTS } from './lib/prompts';
 import { CONFIG, STORAGE_KEYS } from './lib/config';
+import { removeTransientImagePreview } from './lib/dataSanitizers';
 import { getLocalISOString, sortByDateAndIdDesc } from './lib/utils';
 import { useAutoClearStatus } from './hooks/useStatusMessage';
 import { useImportExport } from './hooks/useImportExport';
@@ -19,6 +20,59 @@ import type {
   ConfirmModalState, TargetModalState, RangeQueryResults,
   ResistanceDef, ResistanceLog, ResistanceItem
 } from './types';
+
+type FavoriteSelectable = FavoriteFood | FavoriteWaterContainer;
+
+type LinkedLogItem = {
+  id: number;
+  linkId?: number;
+};
+
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : '未知錯誤';
+
+const getFoodWarnings = (food: AnalyzedFood): string[] => {
+  const warnings: string[] = [];
+  const calories = food.calories || 0;
+  const protein = food.protein || 0;
+  const carbs = food.carbs || 0;
+  const fat = food.fat || 0;
+
+  if (!food.foodName?.trim()) warnings.push('AI 沒有明確辨識出食物名稱，儲存前請先確認。');
+  if (calories <= 0) warnings.push('熱量看起來是 0 或缺漏，請確認是否合理。');
+  if (calories > 1500) warnings.push('這筆食物熱量偏高，可能是份量或辨識結果被高估。');
+  if ((protein + carbs + fat) <= 0) warnings.push('營養素資料缺漏，蛋白質、碳水或脂肪可能需要手動修正。');
+  if ((protein * 4 + carbs * 4 + fat * 9) > calories * 1.6 && calories > 0) {
+    warnings.push('營養素換算熱量和總熱量差距偏大，建議確認數字。');
+  }
+
+  return warnings;
+};
+
+const getActivityWarnings = (activity: AnalyzedActivity): string[] => {
+  const warnings: string[] = [];
+  const calories = activity.activeCalories || 0;
+  const minutes = activity.exerciseMinutes || 0;
+
+  if (calories <= 0) warnings.push('運動消耗熱量看起來是 0 或缺漏，請確認。');
+  if (calories > 1500) warnings.push('這筆運動消耗偏高，可能需要確認運動強度或時間。');
+  if (minutes > 300) warnings.push('運動時間超過 5 小時，請確認是否被 AI 高估。');
+
+  return warnings;
+};
+
+const getWaterWarnings = (water: AnalyzedWater): string[] => {
+  const warnings: string[] = [];
+  const amount = water.amount || 0;
+  const calories = water.calories || 0;
+
+  if (!water.beverageName?.trim()) warnings.push('AI 沒有明確辨識出飲品名稱，儲存前請先確認。');
+  if (amount <= 0) warnings.push('飲水量看起來是 0 或缺漏，請確認。');
+  if (amount > 2000) warnings.push('單次飲水量超過 2000ml，可能是 AI 把容器或份量估太大。');
+  if (calories > 800) warnings.push('這杯飲品熱量偏高，若不是奶昔或含糖飲料，建議確認。');
+
+  return warnings;
+};
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'daily' | 'weight'>('daily');
@@ -243,17 +297,26 @@ const App: React.FC = () => {
           prompt = (currentType === 'food' ? PROMPTS.foodText : PROMPTS.activityText).replace('{{TEXT}}', manualText);
         }
       }
-      const res = await callGeminiWithFallback(prompt, img, setAnalysisStatus, apiKeys);
+      const res = await callGeminiWithFallback<AnalyzedFood | AnalyzedActivity | AnalyzedWater>(prompt, img, setAnalysisStatus, apiKeys);
       if (!res.notes) res.notes = "本次分析未產生額外建議。";
       const obj = { ...res, imagePreview: imagePreview || undefined, isText: !img };
       setPortion(1.0);
       setAnalyzedFood(null); setAnalyzedActivity(null); setAnalyzedWater(null);
-      if (currentType === 'food') setAnalyzedFood(obj);
-      else if (currentType === 'activity') setAnalyzedActivity(obj);
-      else setAnalyzedWater(obj);
+      if (currentType === 'food') {
+        const food = obj as AnalyzedFood;
+        setAnalyzedFood({ ...food, warnings: getFoodWarnings(food) });
+      }
+      else if (currentType === 'activity') {
+        const activity = obj as AnalyzedActivity;
+        setAnalyzedActivity({ ...activity, warnings: getActivityWarnings(activity) });
+      }
+      else {
+        const water = obj as AnalyzedWater;
+        setAnalyzedWater({ ...water, warnings: getWaterWarnings(water) });
+      }
       setManualText(''); setImageNotes('');
       setInputModalType(null);
-    } catch (e: any) { alert("分析失敗：\n" + (e.message || "未知錯誤")); }
+    } catch (e: unknown) { alert("分析失敗：\n" + getErrorMessage(e)); }
     finally { setIsAnalyzing(false); setAnalysisStatus(""); }
   };
 
@@ -287,9 +350,9 @@ const App: React.FC = () => {
         .replace('{{totalOut}}', String(totalOut))
         .replace('{{avgOut}}', String(Math.round(totalOut / 7)))
         .replace('{{dose}}', String(currentDose));
-      const res = await callGeminiWithFallback(prompt, null, setCoachStatus, apiKeys);
-      setCoachAdvice(res.advice || res.reply);
-    } catch (e: any) { alert("發生錯誤：" + e.message); }
+      const res = await callGeminiWithFallback<{ advice?: string; reply?: string }>(prompt, null, setCoachStatus, apiKeys);
+      setCoachAdvice(res.advice || res.reply || '');
+    } catch (e: unknown) { alert("發生錯誤：" + getErrorMessage(e)); }
     finally { setIsCoachThinking(false); setCoachStatus(""); }
   };
 
@@ -343,7 +406,7 @@ const App: React.FC = () => {
 
       const prompt = PROMPTS.resistanceCalc.replace('{{weight}}', String(currentWeight)).replace('{{items}}', itemsList);
 
-      const res = await callGeminiWithFallback(prompt, null, setAnalysisStatus, apiKeys);
+      const res = await callGeminiWithFallback<{ totalCalories?: number; notes?: string }>(prompt, null, setAnalysisStatus, apiKeys);
 
       const totalCalories = res.totalCalories || 0;
       const notes = res.notes || "";
@@ -367,8 +430,8 @@ const App: React.FC = () => {
       setStatusMessage({ type: 'success', text: `已儲存！預估消耗 ${totalCalories} kcal` });
       setInputModalType(null);
 
-    } catch (e: any) {
-      alert("AI 計算發生錯誤: " + e.message);
+    } catch (e: unknown) {
+      alert("AI 計算發生錯誤: " + getErrorMessage(e));
     } finally {
       setIsAnalyzing(false);
       setAnalysisStatus("");
@@ -464,33 +527,77 @@ const App: React.FC = () => {
     }
     else if (type === 'food' && analyzedFood) {
       if (addToFavorites) {
-        setFavoriteFoods(prev => [{ id: now + 1, ...analyzedFood }, ...prev]);
+        setFavoriteFoods(prev => [{
+          id: now + 1,
+          foodName: analyzedFood.foodName,
+          calories: analyzedFood.calories,
+          protein: analyzedFood.protein,
+          carbs: analyzedFood.carbs,
+          fat: analyzedFood.fat
+        }, ...prev]);
       }
       const finalCal = Math.round(analyzedFood.calories * portion);
       const finalPro = Math.round((analyzedFood.protein || 0) * portion);
       const finalCarbs = analyzedFood.carbs ? Math.round(analyzedFood.carbs * portion) : 0;
       const finalFat = analyzedFood.fat ? Math.round(analyzedFood.fat * portion) : 0;
 
-      setFoodLogs(p => [{ ...analyzedFood, id: now, date: logDate, type: 'food', calories: finalCal, protein: finalPro, carbs: finalCarbs, fat: finalFat, portion: portion }, ...p]);
+      setFoodLogs(p => [removeTransientImagePreview({
+        id: now,
+        date: logDate,
+        type: 'food',
+        foodName: analyzedFood.foodName,
+        calories: finalCal,
+        protein: finalPro,
+        carbs: finalCarbs,
+        fat: finalFat,
+        amount: analyzedFood.amount,
+        notes: analyzedFood.notes,
+        imagePreview: analyzedFood.imagePreview,
+        isText: analyzedFood.isText,
+        portion: portion
+      }), ...p]);
 
       setAnalyzedFood(null);
     }
     else if (type === 'activity' && analyzedActivity) {
-      setActivityLogs(p => [{ ...analyzedActivity, id: now, date: logDate, type: 'activity' }, ...p]);
+      setActivityLogs(p => [removeTransientImagePreview({
+        id: now,
+        date: logDate,
+        type: 'activity',
+        activityName: analyzedActivity.activityName,
+        activeCalories: analyzedActivity.activeCalories,
+        exerciseMinutes: analyzedActivity.exerciseMinutes,
+        steps: analyzedActivity.steps,
+        notes: analyzedActivity.notes,
+        imagePreview: analyzedActivity.imagePreview,
+        isText: analyzedActivity.isText
+      }), ...p]);
       setAnalyzedActivity(null);
     }
     else if (type === 'water' && analyzedWater) {
       if (addToFavorites) {
-        // Cast to FavoriteWaterContainer to match original behavior (original had no type checking)
         setFavoriteWaterContainers(prev => [{ id: now + 1, beverageName: analyzedWater.beverageName || '', amount: analyzedWater.amount, calories: analyzedWater.calories, protein: analyzedWater.protein, carbs: analyzedWater.carbs, fat: analyzedWater.fat }, ...prev]);
       }
       const finalAmount = Math.round((analyzedWater.amount || 0) * portion);
-      // Original: const isCaloric = analyzedWater.calories > 0 (without null check, would error if undefined)
-      // Using same logic but with fallback to maintain equivalent behavior
       const isCaloric = (analyzedWater.calories ?? 0) > 0;
       const linkId = isCaloric ? now : undefined;
 
-      setWaterLogs(p => [{ ...analyzedWater, id: now, linkId: linkId, date: logDate, type: 'water', amount: finalAmount, isHidden: isCaloric }, ...p]);
+      setWaterLogs(p => [removeTransientImagePreview({
+        id: now,
+        linkId: linkId,
+        date: logDate,
+        type: 'water',
+        beverageName: analyzedWater.beverageName,
+        amount: finalAmount,
+        calories: analyzedWater.calories,
+        protein: analyzedWater.protein,
+        carbs: analyzedWater.carbs,
+        fat: analyzedWater.fat,
+        notes: analyzedWater.notes,
+        imagePreview: analyzedWater.imagePreview,
+        isText: analyzedWater.isText,
+        isHidden: isCaloric
+      }), ...p]);
 
       if (isCaloric) {
         const finalCal = Math.round((analyzedWater.calories || 0) * portion);
@@ -513,9 +620,9 @@ const App: React.FC = () => {
     }
   };
 
-  const selectFavorite = (item: any) => {
-    if (inputModalType === 'water') setAnalyzedWater({ ...item, imagePreview: undefined });
-    else setAnalyzedFood({ ...item, imagePreview: undefined });
+  const selectFavorite = (item: FavoriteSelectable) => {
+    if (inputModalType === 'water' && 'amount' in item) setAnalyzedWater({ ...item, imagePreview: undefined });
+    else if ('foodName' in item) setAnalyzedFood({ ...item, imagePreview: undefined });
     setPortion(1.0);
     setInputModalType(null);
   };
@@ -573,7 +680,7 @@ const App: React.FC = () => {
     if (type === 'food') { const item = foodLogs.find(i => i.id === id); if (item) linkId = item.linkId; }
     else if (type === 'water') { const item = waterLogs.find(i => i.id === id); if (item) linkId = item.linkId; }
 
-    const shouldDelete = (item: any) => item.id === id || (linkId && item.linkId === linkId);
+    const shouldDelete = (item: LinkedLogItem) => item.id === id || (linkId !== undefined && item.linkId === linkId);
 
     if (type === 'weight') setWeightLogs(prev => prev.filter(item => item.id !== id));
     else if (type === 'resistanceDef') {
