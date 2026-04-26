@@ -878,7 +878,7 @@ const App: React.FC = () => {
 
       {/* Header */}
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v1.8.9</span></h1>
+        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">v2.0</span></h1>
         <div className="flex gap-3">
           <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
           <button onClick={handleExport} className="flex flex-col items-center text-neutral-500 hover:text-teal-400"><Icons.Download /><span className="text-[10px] font-bold">BACKUP</span></button>
