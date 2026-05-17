@@ -371,6 +371,15 @@ const App: React.FC = () => {
     setResistanceSession(prev => prev.map(item => item.defId === defId ? { ...item, [field]: val } : item));
   };
 
+  const estimateResistanceItemSeconds = (item: ResistanceItem): number => {
+    const sets = Math.max(Math.round(item.sets || 0), 0);
+    const reps = Math.max(Math.round(item.reps || 0), 0);
+    if (sets <= 0) return 0;
+    const secondsPerSet = item.time && item.time > 0 ? item.time : reps * 3;
+    const restSeconds = Math.max(sets - 1, 0) * 60;
+    return Math.round((secondsPerSet * sets) + restSeconds);
+  };
+
   const calculateAndSaveResistance = async () => {
     if (resistanceSession.length === 0) { alert("請至少勾選一個項目"); return; }
     setIsAnalyzing(true);
@@ -379,8 +388,11 @@ const App: React.FC = () => {
     try {
       const currentWeight = sortByDateAndIdDesc(weightLogs)[0]?.weight || CONFIG.START_W;
       const itemsList = resistanceSession.map(i => {
-        let s = `- ${i.name}: ${i.weight}kg, ${i.sets}組, ${i.reps}次`;
-        if (i.time && i.time > 0) s += `, 每組${i.time}秒`;
+        const estimatedSeconds = estimateResistanceItemSeconds(i);
+        const estimatedMinutes = Math.round(estimatedSeconds / 60 * 10) / 10;
+        const secondsPerSet = i.time && i.time > 0 ? `${i.time}秒` : `${i.reps * 3}秒（以每次3秒估算）`;
+        let s = `- ${i.name}: ${i.weight}kg, ${i.sets}組, 每組${i.reps}次, 每組動作時間${secondsPerSet}, 組間休息固定60秒`;
+        if (estimatedSeconds > 0) s += `, 估算總時間${estimatedSeconds}秒（約${estimatedMinutes}分鐘）`;
         return s;
       }).join('\n');
 
