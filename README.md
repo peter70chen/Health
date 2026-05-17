@@ -16,7 +16,7 @@
 - **框架**: React 18 + TypeScript
 - **建置工具**: Vite 5
 - **樣式**: TailwindCSS 3
-- **AI**: Google Gemini API (`gemini-3.1-flash-lite-preview`)
+- **AI**: Google Gemini API (`gemini-3.1-pro-preview`, with automatic fallback)
 
 ## 開發指令
 
@@ -108,7 +108,7 @@ vercel
 
 ## API 設定
 
-應用程式需要 Google Gemini API Key 才能使用 AI 功能，目前照片食物辨識模型使用 `gemini-3.1-flash-lite-preview`：
+應用程式需要 Google Gemini API Key 才能使用 AI 功能，目前照片食物辨識模型優先使用 `gemini-3.1-pro-preview`，若暫時不可用會自動備援到 Flash / 2.5 系列：
 
 1. 前往 [Google AI Studio](https://aistudio.google.com/)
 2. 建立 API Key

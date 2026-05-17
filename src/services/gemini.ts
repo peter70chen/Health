@@ -19,6 +19,9 @@ type GeminiRequestPart =
     | { text: string }
     | { inlineData: { mimeType: string; data: string } };
 
+const PRIMARY_MODEL = 'gemini-3.1-pro-preview';
+const FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-2.5-pro'];
+
 const cleanJsonText = (text: string): string => {
     const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const firstBrace = cleaned.indexOf('{');
@@ -65,12 +68,9 @@ export const callGeminiWithFallback = async <T = Record<string, unknown>>(
         throw new Error("請先點擊左上角 [SETTING] 設定 Google Gemini API Key");
     }
 
-    const fetchGemini = async (key: string, typeLabel: string) => {
+    const fetchGemini = async (key: string, typeLabel: string, model: string) => {
         if (updateStatus) updateStatus(`🔄 ${typeLabel}辨識中...`);
-
-        // Use Gemini 3.1 Flash-Lite Preview for image recognition requests.
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${key}`;
-
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
         const parts: GeminiRequestPart[] = [{ text: prompt }];
         if (base64Image) {
             parts.push({ inlineData: { mimeType: "image/jpeg", data: base64Image } });
@@ -96,13 +96,23 @@ export const callGeminiWithFallback = async <T = Record<string, unknown>>(
     };
 
     const tryKey = async (key: string | undefined, label: string) => {
-        if (!key) throw new Error("SKIP");
-        try {
-            return await fetchGemini(key, label);
-        } catch (e: unknown) {
-            if (!(e instanceof Error) || e.message !== "429") throw e;
-            return null;
+        if (!key) return null;
+        const models = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+        let lastError: unknown = null;
+        for (const model of models) {
+            try {
+                return await fetchGemini(key, `${label} (${model})`, model);
+            } catch (e: unknown) {
+                lastError = e;
+                if (e instanceof Error && (e.message === "429" || e.message.includes("not found") || e.message.includes("not supported"))) {
+                    continue;
+                }
+                throw e;
+            }
         }
+        if (lastError instanceof Error && lastError.message === "429") return null;
+        if (lastError instanceof Error) throw lastError;
+        return null;
     };
 
     let res;
@@ -113,5 +123,6 @@ export const callGeminiWithFallback = async <T = Record<string, unknown>>(
     if ((res = await tryKey(apiKeys.free5, "免費金鑰"))) return res;
 
     if (updateStatus) updateStatus(`💰 付費金鑰辨識中...`);
-    return await fetchGemini(apiKeys.paid, "付費金鑰");
+    if ((res = await tryKey(apiKeys.paid, "付費金鑰"))) return res;
+    throw new Error("所有 Gemini API Key 都達到使用限制，請稍後再試");
 };

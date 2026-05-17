@@ -33,8 +33,24 @@ type LinkedLogItem = {
   linkId?: number;
 };
 
+type EditingFoodPortionState = {
+  id: number;
+  portion: number;
+} | null;
+
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '未知錯誤';
+
+const getFoodBaseValues = (food: FoodLog) => {
+  const currentPortion = food.portion && food.portion > 0 ? food.portion : 1;
+  return {
+    calories: food.baseCalories ?? Math.round((food.calories || 0) / currentPortion),
+    protein: food.baseProtein ?? Math.round((food.protein || 0) / currentPortion),
+    carbs: food.baseCarbs ?? Math.round((food.carbs || 0) / currentPortion),
+    fat: food.baseFat ?? Math.round((food.fat || 0) / currentPortion),
+    amount: food.baseAmount ?? ((food.amount ?? 0) > 0 ? Math.round((food.amount || 0) / currentPortion) : undefined)
+  };
+};
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'daily' | 'weight'>('daily');
@@ -90,6 +106,7 @@ const App: React.FC = () => {
   const [isCoachThinking, setIsCoachThinking] = useState(false);
   const [coachAdvice, setCoachAdvice] = useState('');
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState | null>(null);
+  const [editingFoodPortion, setEditingFoodPortion] = useState<EditingFoodPortionState>(null);
 
   const [analysisStatus, setAnalysisStatus] = useState("");
   const [coachStatus, setCoachStatus] = useState("");
@@ -441,7 +458,18 @@ const App: React.FC = () => {
         const carbs = parseNumber(manualForm.val3 || '0', '碳水', { min: 0 }) ?? 0;
         const fat = parseNumber(manualForm.val4 || '0', '脂肪', { min: 0 }) ?? 0;
         if (calories === null) return;
-        const foodItem = { foodName: manualForm.name.trim(), calories: Math.round(calories), protein: Math.round(protein), carbs: Math.round(carbs), fat: Math.round(fat) };
+        const foodItem = {
+          foodName: manualForm.name.trim(),
+          calories: Math.round(calories),
+          protein: Math.round(protein),
+          carbs: Math.round(carbs),
+          fat: Math.round(fat),
+          baseCalories: Math.round(calories),
+          baseProtein: Math.round(protein),
+          baseCarbs: Math.round(carbs),
+          baseFat: Math.round(fat),
+          portion: 1
+        };
         if (addToFavorites) {
           setFavoriteFoods(prev => [{ id: now + 1, ...foodItem }, ...prev]);
         }
@@ -475,6 +503,11 @@ const App: React.FC = () => {
             protein: Math.round(wPro),
             carbs: Math.round(wCarbs),
             fat: 0,
+            baseCalories: Math.round(wCals),
+            baseProtein: Math.round(wPro),
+            baseCarbs: Math.round(wCarbs),
+            baseFat: 0,
+            baseAmount: Math.round(amount),
             amount: Math.round(amount),
             portion: 1,
             isManual: true
@@ -503,6 +536,7 @@ const App: React.FC = () => {
       const finalPro = Math.round((analyzedFood.protein || 0) * portion);
       const finalCarbs = analyzedFood.carbs ? Math.round(analyzedFood.carbs * portion) : 0;
       const finalFat = analyzedFood.fat ? Math.round(analyzedFood.fat * portion) : 0;
+      const baseAmount = analyzedFood.amount && analyzedFood.amount > 0 ? Math.round(analyzedFood.amount) : undefined;
 
       setFoodLogs(p => [removeTransientImagePreview({
         id: now,
@@ -513,7 +547,12 @@ const App: React.FC = () => {
         protein: finalPro,
         carbs: finalCarbs,
         fat: finalFat,
-        amount: analyzedFood.amount,
+        baseCalories: Math.round(analyzedFood.calories || 0),
+        baseProtein: Math.round(analyzedFood.protein || 0),
+        baseCarbs: Math.round(analyzedFood.carbs || 0),
+        baseFat: Math.round(analyzedFood.fat || 0),
+        baseAmount,
+        amount: baseAmount ? Math.round(baseAmount * portion) : undefined,
         notes: analyzedFood.notes,
         imagePreview: analyzedFood.imagePreview,
         isText: analyzedFood.isText,
@@ -567,7 +606,7 @@ const App: React.FC = () => {
         const finalPro = Math.round((analyzedWater.protein || 0) * portion);
         const finalCarbs = Math.round((analyzedWater.carbs || 0) * portion);
         const finalFat = Math.round((analyzedWater.fat || 0) * portion);
-        setFoodLogs(p => [{ id: now + 2, linkId: linkId, date: logDate, type: 'food', foodName: analyzedWater.beverageName || '', calories: finalCal, protein: finalPro, carbs: finalCarbs, fat: finalFat, portion: portion, isManual: true, amount: finalAmount }, ...p]);
+        setFoodLogs(p => [{ id: now + 2, linkId: linkId, date: logDate, type: 'food', foodName: analyzedWater.beverageName || '', calories: finalCal, protein: finalPro, carbs: finalCarbs, fat: finalFat, baseCalories: Math.round(analyzedWater.calories || 0), baseProtein: Math.round(analyzedWater.protein || 0), baseCarbs: Math.round(analyzedWater.carbs || 0), baseFat: Math.round(analyzedWater.fat || 0), baseAmount: Math.round(analyzedWater.amount || 0), portion: portion, isManual: true, amount: finalAmount }, ...p]);
       }
       setAnalyzedWater(null);
     }
@@ -665,6 +704,42 @@ const App: React.FC = () => {
       setActivityLogs(prev => prev.filter(item => !shouldDelete(item)));
     }
     setConfirmModal(null);
+  };
+
+  const openFoodPortionEditor = (food: FoodLog) => {
+    setEditingFoodPortion({
+      id: food.id,
+      portion: food.portion && food.portion > 0 ? food.portion : 1
+    });
+  };
+
+  const updateEditingFoodPortion = (portionValue: number) => {
+    setEditingFoodPortion(prev => prev ? { ...prev, portion: portionValue } : prev);
+  };
+
+  const saveEditingFoodPortion = () => {
+    if (!editingFoodPortion) return;
+    setFoodLogs(prev => prev.map(food => {
+      if (food.id !== editingFoodPortion.id) return food;
+      const base = getFoodBaseValues(food);
+      const nextAmount = base.amount !== undefined ? Math.round(base.amount * editingFoodPortion.portion) : food.amount;
+      return {
+        ...food,
+        portion: editingFoodPortion.portion,
+        calories: Math.round(base.calories * editingFoodPortion.portion),
+        protein: Math.round(base.protein * editingFoodPortion.portion),
+        carbs: Math.round(base.carbs * editingFoodPortion.portion),
+        fat: Math.round(base.fat * editingFoodPortion.portion),
+        amount: nextAmount,
+        baseCalories: base.calories,
+        baseProtein: base.protein,
+        baseCarbs: base.carbs,
+        baseFat: base.fat,
+        baseAmount: base.amount
+      };
+    }));
+    setEditingFoodPortion(null);
+    setStatusMessage({ type: 'success', text: '食物份量已更新' });
   };
 
   // 長按水杯開啟快速加水模態框
@@ -858,6 +933,8 @@ const App: React.FC = () => {
   if (loading) return <div className="flex h-screen items-center justify-center text-neutral-400 bg-black">Loading...</div>;
   const hasAnyKey = apiKeys.free1 || apiKeys.free2 || apiKeys.free3 || apiKeys.free4 || apiKeys.free5 || apiKeys.paid;
   const isViewingHistory = currentViewDate !== today;
+  const editingFood = editingFoodPortion ? foodLogs.find(food => food.id === editingFoodPortion.id) : undefined;
+  const editingFoodBase = editingFood ? getFoodBaseValues(editingFood) : null;
 
   return (
     <div className="pb-32 max-w-md mx-auto min-h-screen relative bg-black">
@@ -917,6 +994,54 @@ const App: React.FC = () => {
         setConfirmModal={setConfirmModal}
         executeDelete={executeDelete}
       />
+
+      {editingFood && editingFoodPortion && editingFoodBase && (
+        <div className="fixed inset-0 bg-black/80 z-[90] flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-2xl p-5 shadow-2xl animate-fadeIn">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div className="text-xs font-bold text-teal-400 mb-1">調整食用份量</div>
+                <h3 className="text-lg font-bold text-white leading-snug">{editingFood.foodName}</h3>
+              </div>
+              <button onClick={() => setEditingFoodPortion(null)} className="text-neutral-500 hover:text-white p-2">
+                <Icons.X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-4 mb-4">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-bold text-neutral-300">份量</span>
+                <span className="text-2xl font-black text-teal-400">{editingFoodPortion.portion.toFixed(1)} 份</span>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="3"
+                step="0.1"
+                value={editingFoodPortion.portion}
+                onChange={e => updateEditingFoodPortion(parseFloat(e.target.value))}
+                className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
+              />
+              <div className="flex justify-between text-xs text-neutral-500 mt-2">
+                <span>0.1</span>
+                <span>1.0</span>
+                <span>3.0</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 text-center bg-neutral-950 border border-neutral-800 rounded-xl overflow-hidden mb-4">
+              <div className="p-3 border-r border-neutral-800"><div className="text-xs text-neutral-500">熱量</div><div className="font-bold text-orange-400">{Math.round(editingFoodBase.calories * editingFoodPortion.portion)}</div></div>
+              <div className="p-3 border-r border-neutral-800"><div className="text-xs text-neutral-500">蛋白</div><div className="font-bold text-blue-400">{Math.round(editingFoodBase.protein * editingFoodPortion.portion)}g</div></div>
+              <div className="p-3 border-r border-neutral-800"><div className="text-xs text-neutral-500">碳水</div><div className="font-bold text-yellow-400">{Math.round(editingFoodBase.carbs * editingFoodPortion.portion)}g</div></div>
+              <div className="p-3"><div className="text-xs text-neutral-500">脂肪</div><div className="font-bold text-green-400">{Math.round(editingFoodBase.fat * editingFoodPortion.portion)}g</div></div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setEditingFoodPortion(null)} className="flex-1 py-4 border border-neutral-700 rounded-xl font-bold text-neutral-400 hover:bg-neutral-800">取消</button>
+              <button onClick={saveEditingFoodPortion} className="flex-1 py-4 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-500 flex items-center justify-center gap-2">
+                <Icons.Save className="w-5 h-5" /> 儲存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Water Modal */}
       <QuickWaterModal
@@ -1031,7 +1156,7 @@ const App: React.FC = () => {
               />
             </div>
             {/* Daily List */}
-            <DailyList foodList={dailyFoodList} waterList={dailyWaterList} activityList={dailyActivityList} setConfirmModal={setConfirmModal} />
+            <DailyList foodList={dailyFoodList} waterList={dailyWaterList} activityList={dailyActivityList} setConfirmModal={setConfirmModal} onEditFoodPortion={openFoodPortionEditor} />
 
             {/* Trend Chart */}
             <div className="bg-neutral-900 rounded-2xl shadow-sm border border-neutral-800 p-5 mt-8">

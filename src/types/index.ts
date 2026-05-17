@@ -31,6 +31,11 @@ export interface FoodLog {
     protein?: number;
     carbs?: number;
     fat?: number;
+    baseCalories?: number;
+    baseProtein?: number;
+    baseCarbs?: number;
+    baseFat?: number;
+    baseAmount?: number;
     portion?: number;
     amount?: number;
     isManual?: boolean;

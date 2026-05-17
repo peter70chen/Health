@@ -7,9 +7,10 @@ interface DailyListProps {
   waterList: WaterLog[];
   activityList: (ActivityLog & { _source?: 'activity' | 'resistance' })[];
   setConfirmModal: (modal: ConfirmModalState | null) => void;
+  onEditFoodPortion: (food: FoodLog) => void;
 }
 
-export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activityList, setConfirmModal }) => {
+export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activityList, setConfirmModal, onEditFoodPortion }) => {
   const hasAnyRecords = foodList.length > 0 || waterList.length > 0 || activityList.length > 0;
 
   // 收合狀態管理 - 預設收合
@@ -67,9 +68,14 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setConfirmModal({ id: l.id, type: 'food' })} className="text-neutral-600 p-2 hover:text-red-500 active:scale-90 transition-transform">
-                  <Icons.Trash className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => onEditFoodPortion(l)} className="text-neutral-500 p-2 hover:text-teal-400 active:scale-90 transition-transform" aria-label="調整份量">
+                    <Icons.Edit className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setConfirmModal({ id: l.id, type: 'food' })} className="text-neutral-600 p-2 hover:text-red-500 active:scale-90 transition-transform" aria-label="刪除食物">
+                    <Icons.Trash className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )) : <div className="text-center py-4 text-neutral-600 text-sm mt-2">今天還沒有食物記錄</div>}
           </div>
