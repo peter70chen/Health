@@ -19,7 +19,7 @@ type GeminiRequestPart =
     | { text: string }
     | { inlineData: { mimeType: string; data: string } };
 
-const PRIMARY_MODEL = 'gemini-3.1-pro-preview';
+const PRIMARY_MODEL = 'gemini-3.5-flash';
 const FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-2.5-pro'];
 
 const cleanJsonText = (text: string): string => {

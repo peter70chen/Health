@@ -62,7 +62,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <label className="block text-sm font-bold text-neutral-400 mb-2">
             Google Gemini API Keys
             <span className="block text-[10px] font-normal text-neutral-500 mt-1">
-              目前照片辨識模型：Gemini 3.1 Pro Preview（自動備援 Flash）
+              目前照片辨識模型：Gemini 3.5 Flash（自動備援 Flash-Lite / Pro）
             </span>
           </label>
           {[1, 2, 3, 4, 5].map(i => (
