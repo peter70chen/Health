@@ -357,12 +357,15 @@ export const InputModal: React.FC<InputModalProps> = ({
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-sm font-bold text-neutral-400">名稱</label>
                   {inputModalType === 'activity' && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <label className="flex items-center gap-1 text-[10px] text-neutral-400 cursor-pointer hover:text-teal-400 transition-colors">
                         <input type="checkbox" checked={manualForm.name === '每日消耗'} onChange={() => setManualForm(p => ({ ...p, name: '每日消耗' }))} className="accent-teal-500" /> 每日消耗
                       </label>
                       <label className="flex items-center gap-1 text-[10px] text-neutral-400 cursor-pointer hover:text-teal-400 transition-colors">
                         <input type="checkbox" checked={manualForm.name === '每日消耗（含運動）'} onChange={() => setManualForm(p => ({ ...p, name: '每日消耗（含運動）' }))} className="accent-teal-500" /> 每日消耗(含運動)
+                      </label>
+                      <label className="flex items-center gap-1 text-[10px] text-neutral-400 cursor-pointer hover:text-teal-400 transition-colors">
+                        <input type="checkbox" checked={manualForm.name === '跑步機額外'} onChange={() => setManualForm(p => ({ ...p, name: '跑步機額外' }))} className="accent-teal-500" /> 跑步機額外
                       </label>
                     </div>
                   )}

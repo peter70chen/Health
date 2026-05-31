@@ -362,7 +362,7 @@ const App: React.FC = () => {
     if (exists) {
       setResistanceSession(prev => prev.filter(item => item.defId !== def.id));
     } else {
-      setResistanceSession(prev => [...prev, { defId: def.id, name: def.name, weight: 0, sets: 0, reps: 0 }]);
+      setResistanceSession(prev => [...prev, { defId: def.id, name: def.name, weight: 12, sets: 3, reps: 12 }]);
     }
   };
 
@@ -1196,7 +1196,7 @@ const App: React.FC = () => {
                     const totalBurn = a + r;
                     const net = (totalBurn + dailyTarget) - f;
                     const hasResistance = r > 0 || resistanceLogs.some(l => l.date === date);
-                    const hasRunning = activityLogs.some(l => l.date === date && l.activityName === '每日消耗（含運動）');
+                    const hasRunning = activityLogs.some(l => l.date === date && ['每日消耗（含運動）', '跑步機額外'].includes(l.activityName || ''));
                     return (
                       <button key={date} onClick={() => setCurrentViewDate(date)} className="w-full bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex justify-between items-center hover:bg-neutral-800 transition-colors">
                         <div className="flex items-center gap-2 w-28">
