@@ -42,8 +42,11 @@ export const useCloudBackup = ({ loading, exportData, setStatusMessage }: HookAr
     localStorage.setItem(STORAGE_KEYS.BACKUP_TOKEN, token);
   }, []);
 
-  const uploadBackup = useCallback(
-    async (token: string): Promise<void> => {
+  // 上傳一律排進同一條 promise queue，避免自動備份與手動備份並發時
+  // 較舊的 payload 後到而覆蓋較新的備份；payload 在輪到執行時才擷取最新資料
+  const uploadQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const uploadBackup = useCallback((token: string): Promise<void> => {
+    const run = async (): Promise<void> => {
       const payload = sanitizeExportData(exportDataRef.current);
       const res = await fetch(API_PATH, {
         method: 'POST',
@@ -52,9 +55,11 @@ export const useCloudBackup = ({ loading, exportData, setStatusMessage }: HookAr
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       localStorage.setItem(STORAGE_KEYS.LAST_CLOUD_BACKUP, getLocalISOString());
-    },
-    []
-  );
+    };
+    const task = uploadQueueRef.current.then(run, run);
+    uploadQueueRef.current = task.catch(() => {});
+    return task;
+  }, []);
 
   // App 每日首次開啟自動備份
   const autoTriedRef = useRef(false);

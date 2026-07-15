@@ -38,7 +38,9 @@ export default async (req: Request): Promise<Response> => {
       return json(401, { error: 'unauthorized' });
     }
 
-    const store = getStore('backups');
+    // strong consistency：寫入後 list/get 立即可見，
+    // 避免 ?latest 拿到舊快照、保留清理漏刪剛超額的份數
+    const store = getStore({ name: 'backups', consistency: 'strong' });
     const url = new URL(req.url);
 
     if (req.method === 'POST') {
