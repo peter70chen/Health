@@ -6,6 +6,7 @@ import {
   sanitizeFoodLogs,
   sanitizeWaterLogs
 } from '../lib/dataSanitizers';
+import { sanitizeExportData, type ExportData } from '../lib/backupPayload';
 import { downloadJsonFile } from '../lib/download';
 import { sortByDateAndIdDesc } from '../lib/utils';
 import type {
@@ -20,21 +21,6 @@ import type {
 } from '../types';
 
 type StatusMessage = { type: 'success' | 'error'; text: string } | null;
-
-type ExportData = {
-  weightLogs: WeightLog[];
-  foodLogs: FoodLog[];
-  activityLogs: ActivityLog[];
-  favoriteFoods: FavoriteFood[];
-  waterLogs: WaterLog[];
-  favoriteWaterContainers: FavoriteWaterContainer[];
-  coachAdvice: string;
-  dailyTarget: number;
-  activityTarget: number;
-  waterTarget: number;
-  resistanceDefs: ResistanceDef[];
-  resistanceLogs: ResistanceLog[];
-};
 
 type ImportSetters = {
   setWeightLogs: (value: WeightLog[]) => void;
@@ -103,14 +89,7 @@ export const useImportExport = ({
   setResistanceLogs
 }: HookArgs) => {
   const handleExport = useCallback(async () => {
-    const sanitizedExportData: ExportData = {
-      ...exportData,
-      foodLogs: sanitizeFoodLogs(exportData.foodLogs),
-      activityLogs: sanitizeActivityLogs(exportData.activityLogs),
-      favoriteFoods: sanitizeFavoriteFoods(exportData.favoriteFoods),
-      waterLogs: sanitizeWaterLogs(exportData.waterLogs),
-      favoriteWaterContainers: sanitizeFavoriteWaterContainers(exportData.favoriteWaterContainers)
-    };
+    const sanitizedExportData = sanitizeExportData(exportData);
     const data = JSON.stringify(sanitizedExportData, null, 2);
     const filename = `PeterPlan_Backup_${getLocalISOString()}.json`;
 
@@ -151,15 +130,10 @@ export const useImportExport = ({
     setStatusMessage({ type: 'success', text: '備份已下載' });
   }, [exportData, getLocalISOString, setStatusMessage]);
 
-  const handleImport = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const r = new FileReader();
-      r.onload = (ev) => {
+  // 解析 + 確認 + 套用備份 JSON。檔案匯入與雲端還原共用。
+  const applyImportedData = useCallback(
+    (rawData: string) => {
         try {
-          const rawData = ev.target?.result as string;
           const d = JSON.parse(rawData) as Record<string, unknown>;
 
           // Support both new keys and legacy mj_ keys
@@ -222,20 +196,8 @@ export const useImportExport = ({
           console.error('Import parse error:', err);
           setStatusMessage({ type: 'error', text: '格式錯誤: ' + getErrorMessage(err) });
         }
-
-        if (importInputRef.current) {
-          importInputRef.current.value = '';
-        }
-      };
-      r.onerror = (err) => {
-        console.error('FileReader error:', err);
-        setStatusMessage({ type: 'error', text: '讀取檔案失敗' });
-        if (importInputRef.current) importInputRef.current.value = '';
-      };
-      r.readAsText(file);
     },
     [
-      importInputRef,
       setStatusMessage,
       setWeightLogs,
       setFoodLogs,
@@ -252,5 +214,27 @@ export const useImportExport = ({
     ]
   );
 
-  return { handleExport, handleImport };
+  const handleImport = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const r = new FileReader();
+      r.onload = (ev) => {
+        applyImportedData(ev.target?.result as string);
+        if (importInputRef.current) {
+          importInputRef.current.value = '';
+        }
+      };
+      r.onerror = (err) => {
+        console.error('FileReader error:', err);
+        setStatusMessage({ type: 'error', text: '讀取檔案失敗' });
+        if (importInputRef.current) importInputRef.current.value = '';
+      };
+      r.readAsText(file);
+    },
+    [applyImportedData, importInputRef, setStatusMessage]
+  );
+
+  return { handleExport, handleImport, applyImportedData };
 };

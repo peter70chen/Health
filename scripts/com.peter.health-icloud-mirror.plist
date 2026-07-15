@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.peter.health-icloud-mirror</string>
+    <!-- 執行本機副本（安裝時 cp 自 repo scripts/），避免外接碟未掛載時
+         連 script 內的 Telegram 失敗告警都無法執行 -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/peter/.local/bin/health-icloud-mirror.sh</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/health-icloud-mirror.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/health-icloud-mirror.log</string>
+</dict>
+</plist>

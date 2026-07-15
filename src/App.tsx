@@ -17,6 +17,7 @@ import { getLocalISOString, sortByDateAndIdDesc } from './lib/utils';
 import { APP_DISPLAY_VERSION } from './lib/version';
 import { useAutoClearStatus } from './hooks/useStatusMessage';
 import { useImportExport } from './hooks/useImportExport';
+import { useCloudBackup } from './hooks/useCloudBackup';
 import { useHydrateFromStorage, usePersistToStorage } from './hooks/useStorageSync';
 import type {
   ApiKeys, WeightLog, FoodLog, ActivityLog, WaterLog, ChartData,
@@ -212,21 +213,23 @@ const App: React.FC = () => {
     setTargetModal(null);
   };
 
-  const { handleExport, handleImport } = useImportExport({
-    exportData: {
-      weightLogs,
-      foodLogs,
-      activityLogs,
-      favoriteFoods,
-      waterLogs,
-      favoriteWaterContainers,
-      coachAdvice,
-      dailyTarget,
-      activityTarget,
-      waterTarget,
-      resistanceDefs,
-      resistanceLogs
-    },
+  const exportData = {
+    weightLogs,
+    foodLogs,
+    activityLogs,
+    favoriteFoods,
+    waterLogs,
+    favoriteWaterContainers,
+    coachAdvice,
+    dailyTarget,
+    activityTarget,
+    waterTarget,
+    resistanceDefs,
+    resistanceLogs
+  };
+
+  const { handleExport, handleImport, applyImportedData } = useImportExport({
+    exportData,
     importInputRef,
     setStatusMessage,
     getLocalISOString,
@@ -243,6 +246,21 @@ const App: React.FC = () => {
     setResistanceDefs,
     setResistanceLogs
   });
+
+  const {
+    backupToken,
+    saveBackupToken,
+    isBackingUp,
+    snapshots,
+    backupNow,
+    refreshSnapshots,
+    fetchSnapshot
+  } = useCloudBackup({ loading, exportData, setStatusMessage });
+
+  const restoreSnapshot = async (date: string) => {
+    const raw = await fetchSnapshot(date);
+    if (raw) applyImportedData(raw);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
@@ -989,6 +1007,13 @@ const App: React.FC = () => {
         apiKeys={apiKeys}
         setApiKeys={setApiKeys}
         saveSettings={saveSettings}
+        backupToken={backupToken}
+        saveBackupToken={saveBackupToken}
+        isBackingUp={isBackingUp}
+        backupNow={backupNow}
+        snapshots={snapshots}
+        refreshSnapshots={refreshSnapshots}
+        restoreSnapshot={restoreSnapshot}
       />
 
       {/* Target Modal */}

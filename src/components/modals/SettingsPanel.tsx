@@ -1,6 +1,7 @@
 import React from 'react';
 import { Icons } from '../Icons';
 import type { ApiKeys } from '../../types';
+import type { CloudSnapshot } from '../../hooks/useCloudBackup';
 
 interface SettingsPanelProps {
   showSettings: boolean;
@@ -14,6 +15,13 @@ interface SettingsPanelProps {
   apiKeys: ApiKeys;
   setApiKeys: React.Dispatch<React.SetStateAction<ApiKeys>>;
   saveSettings: () => void;
+  backupToken: string;
+  saveBackupToken: (token: string) => void;
+  isBackingUp: boolean;
+  backupNow: () => void;
+  snapshots: CloudSnapshot[] | null;
+  refreshSnapshots: () => void;
+  restoreSnapshot: (date: string) => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -27,7 +35,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   setWaterTarget,
   apiKeys,
   setApiKeys,
-  saveSettings
+  saveSettings,
+  backupToken,
+  saveBackupToken,
+  isBackingUp,
+  backupNow,
+  snapshots,
+  refreshSnapshots,
+  restoreSnapshot
 }) => {
   if (!showSettings) return null;
 
@@ -73,6 +88,52 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <div className="mt-2">
             <input type="password" value={apiKeys.paid} onChange={e => setApiKeys(p => ({ ...p, paid: e.target.value }))} placeholder="Paid Key (Backup)" className="w-full p-2 border rounded-lg text-xs bg-neutral-800 border-orange-900/50 focus:border-orange-500 outline-none text-orange-200" />
           </div>
+        </div>
+        <div className="border-t border-neutral-700 pt-4">
+          <label className="block text-sm font-bold text-purple-400 mb-1 flex items-center gap-1">
+            <Icons.Save className="w-4 h-4" /> 雲端備份
+            <span className="block text-[10px] font-normal text-neutral-500 ml-1">
+              每天第一次開啟 App 自動備份
+            </span>
+          </label>
+          <input
+            type="password"
+            value={backupToken}
+            onChange={e => saveBackupToken(e.target.value)}
+            placeholder="備份 Token（與 Netlify BACKUP_TOKEN 相同）"
+            className="w-full p-2 border rounded-lg text-xs bg-neutral-800 border-neutral-700 focus:border-purple-500 outline-none text-neutral-300"
+          />
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={backupNow}
+              disabled={isBackingUp}
+              className="flex-1 bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+            >
+              {isBackingUp ? '備份中...' : '立即備份'}
+            </button>
+            <button
+              onClick={refreshSnapshots}
+              className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+            >
+              雲端還原
+            </button>
+          </div>
+          {snapshots !== null && (
+            <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-neutral-700 divide-y divide-neutral-800">
+              {snapshots.length === 0 && (
+                <div className="p-2 text-xs text-neutral-500">雲端尚無備份</div>
+              )}
+              {snapshots.map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => restoreSnapshot(s.date)}
+                  className="w-full text-left p-2 text-xs text-neutral-300 hover:bg-neutral-800 transition-colors"
+                >
+                  {s.date} 的備份 — 點此還原
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <button onClick={saveSettings} className="bg-teal-600 text-white px-4 py-4 rounded-xl text-sm w-full font-bold flex justify-center items-center gap-2 mt-6 hover:bg-teal-500 transition-colors">
