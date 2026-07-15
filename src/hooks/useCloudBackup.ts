@@ -17,6 +17,15 @@ const API_PATH = '/api/backup';
 
 const authHeaders = (token: string): HeadersInit => ({ 'x-backup-token': token });
 
+// 自動備份的 sanity guard：空資料不上傳，避免新裝置/清空後的 localStorage
+// 靜默覆蓋掉當天雲端既有的完整備份（手動備份不受此限）
+const hasMeaningfulData = (data: ExportData): boolean =>
+  data.weightLogs.length > 0 ||
+  data.foodLogs.length > 0 ||
+  data.activityLogs.length > 0 ||
+  data.waterLogs.length > 0 ||
+  data.resistanceLogs.length > 0;
+
 export const useCloudBackup = ({ loading, exportData, setStatusMessage }: HookArgs) => {
   const [backupToken, setBackupToken] = useState(
     () => localStorage.getItem(STORAGE_KEYS.BACKUP_TOKEN) ?? ''
@@ -56,6 +65,7 @@ export const useCloudBackup = ({ loading, exportData, setStatusMessage }: HookAr
     const today = getLocalISOString();
     const last = localStorage.getItem(STORAGE_KEYS.LAST_CLOUD_BACKUP);
     if (!backupToken || !navigator.onLine || last === today) return;
+    if (!hasMeaningfulData(exportDataRef.current)) return;
 
     uploadBackup(backupToken)
       .then(() => setStatusMessage({ type: 'success', text: '已自動備份到雲端 ✓' }))

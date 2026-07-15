@@ -43,7 +43,7 @@ export default async (req: Request): Promise<Response> => {
 
     if (req.method === 'POST') {
       const body = await req.text();
-      if (body.length > MAX_BODY_BYTES) {
+      if (new TextEncoder().encode(body).length > MAX_BODY_BYTES) {
         return json(413, { error: 'backup too large' });
       }
       try {

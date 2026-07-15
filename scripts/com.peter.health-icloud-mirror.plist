@@ -4,10 +4,12 @@
 <dict>
     <key>Label</key>
     <string>com.peter.health-icloud-mirror</string>
+    <!-- 執行本機副本（安裝時 cp 自 repo scripts/），避免外接碟未掛載時
+         連 script 內的 Telegram 失敗告警都無法執行 -->
     <key>ProgramArguments</key>
     <array>
         <string>/bin/zsh</string>
-        <string>/Volumes/Working disk_Mac mini home/Projects/Health/scripts/icloud-mirror.sh</string>
+        <string>/Users/peter/.local/bin/health-icloud-mirror.sh</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
