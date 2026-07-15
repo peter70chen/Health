@@ -50,6 +50,11 @@ HTTP_CODE=$(curl -sS -m 60 -w '%{http_code}' -o "$TMP_BODY" -D "$TMP_HDR" \
     -H "x-backup-token: ${BACKUP_TOKEN}" \
     "${SITE_URL%/}/api/backup?latest") || notify_fail "curl 連線失敗"
 
+# 雲端還沒有任何備份（App 尚未設定 token）屬正常狀態，不發告警
+if [ "$HTTP_CODE" = "404" ]; then
+    echo "SKIP: 雲端尚無備份（HTTP 404），跳過本次鏡像"
+    exit 0
+fi
 [ "$HTTP_CODE" = "200" ] || notify_fail "API 回應 HTTP $HTTP_CODE"
 
 # 驗證是合法 JSON
