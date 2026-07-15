@@ -36,6 +36,8 @@ export const STORAGE_KEYS = {
     WATER_TARGET: 'mj_waterTarget',
     RESISTANCE_DEFS: 'mj_resistanceDefs',
     RESISTANCE_LOGS: 'mj_resistanceLogs',
+    BACKUP_TOKEN: 'mj_backup_token',
+    LAST_CLOUD_BACKUP: 'mj_last_cloud_backup',
 } as const;
 
 // For backwards compatibility
