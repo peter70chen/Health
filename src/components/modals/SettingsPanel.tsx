@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type RefObject, type ChangeEvent } from 'react';
 import { Icons } from '../Icons';
 import type { ApiKeys } from '../../types';
 import type { CloudSnapshot } from '../../hooks/useCloudBackup';
@@ -22,6 +22,9 @@ interface SettingsPanelProps {
   snapshots: CloudSnapshot[] | null;
   refreshSnapshots: () => void;
   restoreSnapshot: (date: string) => void;
+  handleExport: () => void;
+  handleImport: (e: ChangeEvent<HTMLInputElement>) => void;
+  importInputRef: RefObject<HTMLInputElement>;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -42,7 +45,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   backupNow,
   snapshots,
   refreshSnapshots,
-  restoreSnapshot
+  restoreSnapshot,
+  handleExport,
+  handleImport,
+  importInputRef
 }) => {
   if (!showSettings) return null;
 
@@ -134,6 +140,27 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               ))}
             </div>
           )}
+          <div className="flex gap-2 mt-3 pt-3 border-t border-neutral-800">
+            <button
+              onClick={handleExport}
+              className="flex-1 flex items-center justify-center gap-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 px-3 py-2 rounded-lg text-xs transition-colors"
+            >
+              <Icons.Download className="w-3.5 h-3.5" /> 匯出檔案
+            </button>
+            <div className="relative flex-1 flex items-center justify-center gap-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer">
+              <Icons.Upload className="w-3.5 h-3.5" /> 從檔案還原
+              <input
+                type="file"
+                ref={importInputRef}
+                onChange={handleImport}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                accept=".json"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-neutral-600 mt-1">
+            手動匯出 / 匯入備份檔（iCloud 鏡像檔也用「從檔案還原」匯回）
+          </p>
         </div>
       </div>
       <button onClick={saveSettings} className="bg-teal-600 text-white px-4 py-4 rounded-xl text-sm w-full font-bold flex justify-center items-center gap-2 mt-6 hover:bg-teal-500 transition-colors">

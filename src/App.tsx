@@ -983,8 +983,6 @@ const App: React.FC = () => {
           <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
           <button onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center hover:text-teal-400 ${dataHealthIssues.length > 0 ? 'text-amber-400' : 'text-neutral-500'}`}><Icons.ScanEye /><span className="text-[10px] font-bold">CHECK</span></button>
           <button onClick={handleTrainingExport} className="flex flex-col items-center text-teal-400 hover:text-teal-300"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold">TRAIN</span></button>
-          <button onClick={handleExport} className="flex flex-col items-center text-neutral-500 hover:text-teal-400"><Icons.Download /><span className="text-[10px] font-bold">BACKUP</span></button>
-          <div className="relative flex flex-col items-center text-neutral-500 hover:text-teal-400 cursor-pointer"><Icons.Upload /><span className="text-[10px] font-bold">RESTORE</span><input type="file" ref={importInputRef} onChange={handleImport} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".json" /></div>
         </div>
       </div>
 
@@ -1014,6 +1012,9 @@ const App: React.FC = () => {
         snapshots={snapshots}
         refreshSnapshots={refreshSnapshots}
         restoreSnapshot={restoreSnapshot}
+        handleExport={handleExport}
+        handleImport={handleImport}
+        importInputRef={importInputRef}
       />
 
       {/* Target Modal */}
