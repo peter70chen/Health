@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const rootDir = path.resolve(import.meta.dirname, '..');
-const expectedModel = 'gemini-3.5-flash';
+const expectedModel = 'gemini-3.6-flash';
 
 const checks = [
   {
@@ -12,12 +12,12 @@ const checks = [
   },
   {
     file: 'src/components/modals/SettingsPanel.tsx',
-    required: ['Gemini 3.5 Flash'],
+    required: ['Gemini 3.6 Flash'],
     forbidden: ['Gemini 3.1 Pro Preview']
   },
   {
     file: 'README.md',
-    required: [expectedModel, 'Gemini 3.5 Flash'],
+    required: [expectedModel, 'Gemini 3.6 Flash'],
     forbidden: ['gemini-3.1-pro-preview']
   }
 ];
