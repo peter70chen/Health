@@ -58,6 +58,8 @@ body {
   -webkit-tap-highlight-color: transparent;
   color: #e5e5e5;
   overscroll-behavior-y: none;
+  /* 等寬數字：熱量/體重跳動時不會因字寬變化而抖動 */
+  font-variant-numeric: tabular-nums;
 }
 
 /* Hide Scrollbar */
