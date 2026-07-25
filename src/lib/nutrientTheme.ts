@@ -29,5 +29,7 @@ export const NUTRIENTS: Record<NutrientKey, NutrientStyle> = {
   protein: { label: '蛋白質攝取', short: 'P', text: 'text-blue-400', bar: 'bg-blue-500', barText: 'text-blue-300' },
   carbs: { label: '碳水化合物攝取', short: 'C', text: 'text-amber-400', bar: 'bg-amber-500', barText: 'text-amber-300' },
   fat: { label: '脂肪攝取', short: 'F', text: 'text-green-400', bar: 'bg-green-500', barText: 'text-green-300' },
-  fiber: { label: '膳食纖維攝取', short: '纖', text: 'text-lime-400', bar: 'bg-lime-500', barText: 'text-lime-300' },
+  // 纖維用紫色而非直覺的綠色：綠色會和脂肪的 green 撞色，
+  // 2026-07-25 真機截圖確認四條並排時兩者一眼分不出來。辨識度優先於語意聯想。
+  fiber: { label: '膳食纖維攝取', short: '纖', text: 'text-violet-400', bar: 'bg-violet-500', barText: 'text-violet-300' },
 };

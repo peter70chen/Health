@@ -43,7 +43,12 @@
 }
 
 .scroll-anchor {
-  scroll-margin-top: var(--sticky-offset);
+  /*
+   * 多留 1rem：AI 分析結果卡的「AI 分析結果」標籤是 absolute -top-3，
+   * 掛在卡片本體「外面」。只算卡片頂端的話那個標籤會被分頁列切掉一半
+   * （2026-07-25 真機截圖確認）。
+   */
+  scroll-margin-top: calc(var(--sticky-offset) + 1rem);
   scroll-margin-bottom: 1.5rem;
 }
 

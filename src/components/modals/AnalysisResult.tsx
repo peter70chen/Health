@@ -99,7 +99,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             </label>
             <label className="col-span-2 text-xs font-bold text-neutral-400">
               膳食纖維 g
-              <input type="number" value={analyzedFood.fiber || ''} onChange={e => setAnalyzedFood({ ...analyzedFood, fiber: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-lime-500" />
+              <input type="number" value={analyzedFood.fiber || ''} onChange={e => setAnalyzedFood({ ...analyzedFood, fiber: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-violet-500" />
             </label>
           </div>
           <div className="flex justify-between items-center mb-2">
@@ -138,7 +138,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             </label>
             <label className="col-span-2 text-xs font-bold text-neutral-400">
               膳食纖維 g
-              <input type="number" value={analyzedWater.fiber || ''} onChange={e => setAnalyzedWater({ ...analyzedWater, fiber: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-lime-500" />
+              <input type="number" value={analyzedWater.fiber || ''} onChange={e => setAnalyzedWater({ ...analyzedWater, fiber: Number(e.target.value) || 0 })} className="mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-violet-500" />
             </label>
           </div>
           <div className="flex justify-between items-center mb-2">

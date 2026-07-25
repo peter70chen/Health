@@ -402,7 +402,7 @@ export const InputModal: React.FC<InputModalProps> = ({
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <label className="block text-sm font-bold text-neutral-400 mb-1">膳食纖維 (g)</label>
-                    <input type="number" value={manualForm.val5} onChange={e => setManualForm(p => ({ ...p, val5: e.target.value }))} onFocus={scrollFieldIntoView} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-lime-500 text-white" placeholder="0" />
+                    <input type="number" value={manualForm.val5} onChange={e => setManualForm(p => ({ ...p, val5: e.target.value }))} onFocus={scrollFieldIntoView} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-violet-500 text-white" placeholder="0" />
                   </div>
                   <div className="flex-1" aria-hidden="true" />
                 </div>
