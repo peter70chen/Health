@@ -58,6 +58,8 @@ body {
   -webkit-tap-highlight-color: transparent;
   color: #e5e5e5;
   overscroll-behavior-y: none;
+  /* 等寬數字：熱量/體重跳動時不會因字寬變化而抖動 */
+  font-variant-numeric: tabular-nums;
 }
 
 /* Hide Scrollbar */
@@ -138,4 +140,27 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 /* Cup Container Clip Path */
 .cup-container {
   clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
+}
+
+/*
+ * 減少動態效果：系統層要求時，關掉裝飾性動畫（波浪、fadeIn），
+ * 功能性動畫（spin/pulse，表示「正在處理」）保留但放慢，
+ * transition 壓到近乎即時，避免前庭敏感使用者不適。
+ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn,
+  .wave-bg {
+    animation: none !important;
+  }
+
+  .animate-spin,
+  .animate-pulse {
+    animation-duration: 2s !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
 }

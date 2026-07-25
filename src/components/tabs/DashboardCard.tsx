@@ -63,7 +63,12 @@ const CircularProgress: React.FC<{ remaining: number; total: number }> = ({ rema
           className="transition-all duration-500 ease-out"
         />
       </svg>
-      {/* 中間文字 */}
+      {/*
+       * 中間文字：全頁視覺主角，但字級不能再往上加。
+       * 環外徑 120 - strokeWidth 10 × 2 = 內徑 100px，text-3xl(30px) + font-black 時
+       * 「-1100」這種負四位數會撐出環外壓到筆畫上（2026-07-25 實測截圖確認）。
+       * 超標是這個 app 的常態情境，所以維持 text-2xl / font-extrabold。
+       */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className={`text-2xl font-extrabold ${remaining < 0 ? 'text-red-500' : 'text-white'}`}>
           {remaining}
@@ -109,16 +114,10 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
   return (
     <div className="bg-neutral-900 rounded-2xl shadow-sm border border-neutral-800 p-6">
       <div className="flex justify-between items-center mb-4 border-b border-neutral-800 pb-4">
-        {/* 左側：環形進度圖 */}
+        {/* 左側：環形進度圖。攝取/消耗數字由下方 IN/OUT 卡呈現，這裡不重複 */}
         <div className="flex items-center gap-4">
           <CircularProgress remaining={remaining} total={dailyTarget} />
-          <div>
-            <div className="text-sm text-neutral-400 font-bold mb-1">今日剩餘額度</div>
-            <div className="flex gap-3 text-xs font-bold">
-              <span className="text-orange-400">攝取 {dailyFood.cal}</span>
-              <span className="text-teal-400">消耗 {dailyAct.cal + dailyRes.cal}</span>
-            </div>
-          </div>
+          <div className="text-sm text-neutral-400 font-bold">今日剩餘額度</div>
         </div>
         {/* 右側：每日目標 */}
         <div className="text-right flex flex-col items-end">

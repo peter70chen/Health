@@ -57,7 +57,23 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
             onMouseDown={handleTouchStart}
             onMouseUp={handleTouchEnd}
             onMouseLeave={handleTouchMove}
-            className="relative w-full h-20 bg-neutral-900 rounded-xl border border-neutral-800 px-4 py-3 flex items-center justify-between cursor-pointer overflow-hidden group hover:border-neutral-700 transition-colors select-none"
+            onKeyDown={(e) => {
+                // 鍵盤使用者：Enter/Space 等同點擊（長按快速加水無鍵盤等價操作，屬已知取捨）。
+                // e.repeat 擋掉「按住不放」的自動重複——否則壓著 Enter 會連續記錄好幾杯水。
+                if (e.repeat) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
+            role="button"
+            tabIndex={0}
+            // role="button" 會讓 aria-label 蓋掉內部所有文字，「✨ 目標達成」徽章
+            // 螢幕閱讀器聽不到，所以把達標狀態併進 label 裡。
+            aria-label={`飲水追蹤，目前 ${current} ml，目標 ${target} ml${isReached ? '，已達成目標' : ''}，點擊記錄飲水`}
+            // focus-visible 樣式是必要的：本專案是深色底，瀏覽器預設 focus ring 對比不足，
+            // 鍵盤使用者會不知道焦點在哪。用 ring-offset-black 讓 ring 與卡片邊界分離。
+            className="relative w-full h-20 bg-neutral-900 rounded-xl border border-neutral-800 px-4 py-3 flex items-center justify-between cursor-pointer overflow-hidden group hover:border-neutral-700 transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         >
             <div className="z-10 flex flex-col gap-1">
                 <div className="text-neutral-400 text-xs font-bold flex items-center gap-1">

@@ -30,6 +30,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
       <div className="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
         <button
           onClick={() => setIsFoodExpanded(!isFoodExpanded)}
+          aria-expanded={isFoodExpanded}
           className="w-full p-4 flex items-center justify-between text-left hover:bg-neutral-800/50 transition-colors"
         >
           <div className="flex items-center gap-3">
@@ -88,6 +89,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
       <div className="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
         <button
           onClick={() => setIsWaterExpanded(!isWaterExpanded)}
+          aria-expanded={isWaterExpanded}
           className="w-full p-4 flex items-center justify-between text-left hover:bg-neutral-800/50 transition-colors"
         >
           <div className="flex items-center gap-3">
@@ -134,6 +136,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
       <div className="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
         <button
           onClick={() => setIsActivityExpanded(!isActivityExpanded)}
+          aria-expanded={isActivityExpanded}
           className="w-full p-4 flex items-center justify-between text-left hover:bg-neutral-800/50 transition-colors"
         >
           <div className="flex items-center gap-3">

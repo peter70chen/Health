@@ -1,7 +1,7 @@
 import React from 'react';
 import { Icons } from '../Icons';
 import { NUTRIENTS } from '../../lib/nutrientTheme';
-import type { AnalyzedFood, AnalyzedActivity, AnalyzedWater } from '../../types';
+import type { AnalyzedFood, AnalyzedActivity, AnalyzedWater, SaveLogType } from '../../types';
 
 interface AnalysisResultProps {
   analyzedFood: AnalyzedFood | null;
@@ -14,7 +14,7 @@ interface AnalysisResultProps {
   setPortion: (portion: number) => void;
   addToFavorites: boolean;
   setAddToFavorites: (add: boolean) => void;
-  saveLog: (type: string) => void;
+  saveLog: (type: SaveLogType) => void;
 }
 
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({

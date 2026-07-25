@@ -27,8 +27,11 @@ import type {
   AnalyzedFood, AnalyzedActivity, AnalyzedWater,
   FavoriteFood, FavoriteWaterContainer, ManualFormState,
   ConfirmModalState, TargetModalState, RangeQueryResults,
-  ResistanceDef, ResistanceLog, ResistanceItem
+  ResistanceDef, ResistanceLog, ResistanceItem, SaveLogType
 } from './types';
+
+// 交替附加在 live region 尾端、用來製造 DOM 變化的 NBSP。螢幕閱讀器不會唸出來。
+const ANNOUNCE_NUDGE = '\u00A0';
 
 type FavoriteSelectable = FavoriteFood | FavoriteWaterContainer;
 
@@ -131,6 +134,20 @@ const App: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useAutoClearStatus(statusMessage, setStatusMessage, 3000);
+
+  /*
+   * 播報用 nonce。螢幕閱讀器靠 live region 的「內容變化」觸發播報，
+   * 但 3 秒自動清除之前連續兩次送出「完全相同」的訊息時（例如連按兩下儲存
+   * 都跳「請填寫名稱」），React 算出來的文字一樣 → 沒有 DOM mutation → 第二次靜默。
+   * 實測（2026-07-25，MutationObserver）：連按兩次只有 1 次 mutation。
+   * 呼叫端每次都 setStatusMessage({...}) 產生新物件，所以這個 effect 一定會跑，
+   * 靠交替附加一個不會被唸出來的 NBSP 製造出內容變化。
+   */
+  const [announceNonce, setAnnounceNonce] = useState(0);
+  useEffect(() => {
+    if (statusMessage) setAnnounceNonce(n => n + 1);
+  }, [statusMessage]);
+
   const userScroll = useUserScrolling();
 
   useHydrateFromStorage({
@@ -524,7 +541,7 @@ const App: React.FC = () => {
     return num;
   };
 
-  const saveLog = (type: string) => {
+  const saveLog = (type: SaveLogType) => {
     const now = Date.now();
     const logDate = currentViewDate || getLocalISOString();
 
@@ -951,10 +968,13 @@ const App: React.FC = () => {
       const disp = `${d.getMonth() + 1}/${d.getDate()}`;
       const f = foodLogs.filter(l => l.date === ds).reduce((s, item) => s + (item.calories || 0), 0);
       const a = activityLogs.filter(l => l.date === ds).reduce((s, item) => s + (item.activeCalories || 0), 0);
-      arr.push({ date: ds, disp: disp, in: f, out: a });
+      // 阻力訓練也要算進消耗：儀表板 OUT、歷史查詢、過去記錄區都含阻力，
+      // 之前唯獨趨勢圖漏算，重訓日的消耗柱會跟 dashboard 對不上。
+      const r = resistanceLogs.filter(l => l.date === ds).reduce((s, item) => s + (item.totalCalories || 0), 0);
+      arr.push({ date: ds, disp: disp, in: f, out: a + r });
     }
     return arr;
-  }, [foodLogs, activityLogs, trendRange]);
+  }, [foodLogs, activityLogs, resistanceLogs, trendRange]);
 
   const weightData = useMemo((): ChartData[] => {
     const points: ChartData[] = [];
@@ -1031,9 +1051,19 @@ const App: React.FC = () => {
 
   return (
     <div className="pb-32 max-w-md mx-auto min-h-screen relative bg-black">
-      {/* Status Message Overlay */}
+      {/*
+       * 常駐的 live region。必須「先存在於 DOM，之後才變更內容」，
+       * 螢幕閱讀器才會播報 —— 若把 role="status" 掛在條件渲染的 toast 上，
+       * region 與內容同時插入，多數 SR（VoiceOver/NVDA）不會唸出來。
+       * 所以這裡永遠存在但視覺隱藏，只有文字在變。（2026-07-25）
+       */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {statusMessage ? statusMessage.text + (announceNonce % 2 ? ANNOUNCE_NUDGE : '') : ''}
+      </div>
+
+      {/* Status Message Overlay：純視覺呈現，播報交給上面的 live region，避免唸兩次 */}
       {statusMessage && (
-        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-lg text-white text-sm font-bold flex items-center gap-2 animate-fadeIn ${statusMessage.type === 'success' ? 'bg-teal-600' : 'bg-red-600'}`}>
+        <div aria-hidden="true" className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-lg text-white text-sm font-bold flex items-center gap-2 animate-fadeIn ${statusMessage.type === 'success' ? 'bg-teal-600' : 'bg-red-600'}`}>
           {statusMessage.type === 'success' ? <Icons.Check className="w-4 h-4" /> : <Icons.AlertCircle className="w-4 h-4" />}
           {statusMessage.text}
         </div>
