@@ -6,16 +6,19 @@ import { InputModal, SettingsPanel, ConfirmModal, TargetModal, AnalysisResult, D
 import { QuickWaterModal } from './components/modals/QuickWaterModal';
 import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, WeightForm, WeightList, WeightHistory } from './components/tabs';
 import { callGeminiWithFallback } from './services/gemini';
-import { getActivityWarnings, getFoodWarnings, getWaterWarnings } from './lib/analysisWarnings';
+import { getActivityWarnings, getFoodWarnings, getWaterWarnings, normalizeConfidence } from './lib/analysisWarnings';
 import { getDataHealthIssues } from './lib/dataHealth';
 import { PROMPTS } from './lib/prompts';
 import { CONFIG, STORAGE_KEYS } from './lib/config';
+import { NUTRIENTS } from './lib/nutrientTheme';
 import { removeTransientImagePreview } from './lib/dataSanitizers';
 import { downloadJsonFile } from './lib/download';
 import { buildTrainingExport } from './lib/trainingExport';
 import { getLocalISOString, sortByDateAndIdDesc } from './lib/utils';
+import { scrollIntoViewSmart } from './lib/scroll';
 import { APP_DISPLAY_VERSION } from './lib/version';
 import { useAutoClearStatus } from './hooks/useStatusMessage';
+import { useUserScrolling } from './hooks/useUserScrolling';
 import { useImportExport } from './hooks/useImportExport';
 import { useCloudBackup } from './hooks/useCloudBackup';
 import { useHydrateFromStorage, usePersistToStorage } from './hooks/useStorageSync';
@@ -49,6 +52,8 @@ const getFoodBaseValues = (food: FoodLog) => {
     protein: food.baseProtein ?? Math.round((food.protein || 0) / currentPortion),
     carbs: food.baseCarbs ?? Math.round((food.carbs || 0) / currentPortion),
     fat: food.baseFat ?? Math.round((food.fat || 0) / currentPortion),
+    // 舊資料沒有 baseFiber/fiber，兩層 fallback 後為 0，不會產生 NaN
+    fiber: food.baseFiber ?? Math.round((food.fiber || 0) / currentPortion),
     amount: food.baseAmount ?? ((food.amount ?? 0) > 0 ? Math.round((food.amount || 0) / currentPortion) : undefined)
   };
 };
@@ -101,7 +106,7 @@ const App: React.FC = () => {
   const [analyzedFood, setAnalyzedFood] = useState<AnalyzedFood | null>(null);
   const [analyzedActivity, setAnalyzedActivity] = useState<AnalyzedActivity | null>(null);
   const [analyzedWater, setAnalyzedWater] = useState<AnalyzedWater | null>(null);
-  const [manualForm, setManualForm] = useState<ManualFormState>({ name: '', val1: '', val2: '', val3: '', val4: '' });
+  const [manualForm, setManualForm] = useState<ManualFormState>({ name: '', val1: '', val2: '', val3: '', val4: '', val5: '' });
   const [portion, setPortion] = useState(1.0);
 
   const [isCoachThinking, setIsCoachThinking] = useState(false);
@@ -126,6 +131,7 @@ const App: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useAutoClearStatus(statusMessage, setStatusMessage, 3000);
+  const userScroll = useUserScrolling();
 
   useHydrateFromStorage({
     setWeightLogs,
@@ -163,7 +169,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (inputModalType) {
       setInputMethod('ai');
-      setManualForm({ name: '', val1: '', val2: '', val3: '', val4: '' });
+      setManualForm({ name: '', val1: '', val2: '', val3: '', val4: '', val5: '' });
       setPortion(1.0);
       setSelectedImage(null);
       setImagePreview(null);
@@ -190,13 +196,40 @@ const App: React.FC = () => {
     setStatusMessage({ type: 'success', text: "設定已儲存！" });
   };
 
+  // AI 分析完成後，把結果卡頂端帶到 sticky header 正下方。
+  // block:'start' + .scroll-anchor 的 scroll-margin-top 負責避開 header/tab bar；
+  // 卡片底部的行動按鈕由 AnalysisResult 自己的 sticky footer 負責，
+  // 所以這裡不需要（也不該）試圖把整張長卡片捲進畫面。
+  //
+  // 若結果剛好在使用者手滑（或 iOS 慣性捲動）期間落地，不硬搶畫面，
+  // 而是等他停下來再補捲一次；最多等 5 秒就放棄，避免無限等待。
+  //
+  // 依賴必須是「有沒有結果卡」這個布林值，不能是 analyzedFood 物件本身。
+  // 編輯結果卡的任何欄位都會 setAnalyzedFood({...}) 產生新物件，
+  // 若把物件放進依賴陣列，打一個字就重跑一次 effect、把畫面拉回卡片 ——
+  // 實測從 scrollY 2000 打一個字會被拉回 767（見 e2e/sticky-actions.spec.ts 的迴歸測試）。
+  const hasAnalysisResult = Boolean(analyzedFood || analyzedActivity || analyzedWater);
+
   useEffect(() => {
-    if ((analyzedFood || analyzedActivity || analyzedWater) && analysisResultRef.current) {
-      setTimeout(() => {
-        analysisResultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    }
-  }, [analyzedFood, analyzedActivity, analyzedWater]);
+    if (!hasAnalysisResult) return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const deadline = Date.now() + 5000;
+
+    const attempt = () => {
+      if (cancelled) return;
+      if (userScroll.isActive.current && Date.now() < deadline) {
+        timer = setTimeout(attempt, 300);
+        return;
+      }
+      userScroll.suppress(); // 別把自己的 smooth scroll 誤判成使用者操作
+      scrollIntoViewSmart(analysisResultRef.current, 'start');
+    };
+
+    timer = setTimeout(attempt, 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [hasAnalysisResult, userScroll]);
 
   const openTargetModal = (type: 'daily' | 'activity') => {
     setTargetModal({ type, value: type === 'daily' ? dailyTarget : activityTarget });
@@ -288,7 +321,7 @@ const App: React.FC = () => {
         else prompt = PROMPTS.waterImage;
         prompt = prompt.replace('{{NOTES}}', imageNotes);
       } else {
-        if (!manualText.trim()) { alert("請輸入描述"); setIsAnalyzing(false); return; }
+        if (!manualText.trim()) { setStatusMessage({ type: 'error', text: "請先輸入描述或選擇照片" }); setIsAnalyzing(false); return; }
         if (currentType === 'water') {
           prompt = PROMPTS.waterText.replace('{{TEXT}}', manualText);
         } else {
@@ -302,7 +335,8 @@ const App: React.FC = () => {
       setAnalyzedFood(null); setAnalyzedActivity(null); setAnalyzedWater(null);
       if (currentType === 'food') {
         const food = obj as AnalyzedFood;
-        setAnalyzedFood({ ...food, warnings: getFoodWarnings(food) });
+        // AI 的 confidence 大小寫/措辭不可靠，正規化後才進 state
+        setAnalyzedFood({ ...food, confidence: normalizeConfidence(food.confidence), warnings: getFoodWarnings(food) });
       }
       else if (currentType === 'activity') {
         const activity = obj as AnalyzedActivity;
@@ -314,7 +348,7 @@ const App: React.FC = () => {
       }
       setManualText(''); setImageNotes('');
       setInputModalType(null);
-    } catch (e: unknown) { alert("分析失敗：\n" + getErrorMessage(e)); }
+    } catch (e: unknown) { setStatusMessage({ type: 'error', text: "分析失敗：" + getErrorMessage(e) }); }
     finally { setIsAnalyzing(false); setAnalysisStatus(""); }
   };
 
@@ -330,6 +364,16 @@ const App: React.FC = () => {
       const recentActivity = activityLogs.filter(l => new Date(l.date) >= sevenDaysAgo);
       const totalIn = recentFood.reduce((s, i) => s + (i.calories || 0), 0);
       const totalOut = recentActivity.reduce((s, i) => s + (i.activeCalories || 0), 0);
+      // 日均營養素：讓教練的建議能真的反映纖維/蛋白是否達標，而不是只看熱量
+      const macroTotals = recentFood.reduce(
+        (acc, i) => ({
+          pro: acc.pro + (i.protein || 0),
+          carbs: acc.carbs + (i.carbs || 0),
+          fat: acc.fat + (i.fat || 0),
+          fiber: acc.fiber + (i.fiber || 0)
+        }),
+        { pro: 0, carbs: 0, fat: 0, fiber: 0 }
+      );
       const latestWeightLog = sortByDateAndIdDesc(weightLogs)[0];
       const startW = recentWeights.length > 0 ? recentWeights[0].weight : (latestWeightLog?.weight || CONFIG.START_W);
       const endW = recentWeights.length > 0 ? recentWeights[recentWeights.length - 1].weight : startW;
@@ -347,10 +391,16 @@ const App: React.FC = () => {
         .replace('{{avgIn}}', String(Math.round(totalIn / 7)))
         .replace('{{totalOut}}', String(totalOut))
         .replace('{{avgOut}}', String(Math.round(totalOut / 7)))
+        .replace('{{avgPro}}', String(Math.round(macroTotals.pro / 7)))
+        .replace('{{avgCarbs}}', String(Math.round(macroTotals.carbs / 7)))
+        .replace('{{avgFat}}', String(Math.round(macroTotals.fat / 7)))
+        .replace('{{avgFiber}}', String(Math.round(macroTotals.fiber / 7)))
+        .replace('{{proTarget}}', String(CONFIG.PRO_TARGET))
+        .replace('{{fiberTarget}}', String(CONFIG.FIBER_TARGET))
         .replace('{{dose}}', String(currentDose));
       const res = await callGeminiWithFallback<{ advice?: string; reply?: string }>(prompt, null, setCoachStatus, apiKeys);
       setCoachAdvice(res.advice || res.reply || '');
-    } catch (e: unknown) { alert("發生錯誤：" + getErrorMessage(e)); }
+    } catch (e: unknown) { setStatusMessage({ type: 'error', text: "教練分析失敗：" + getErrorMessage(e) }); }
     finally { setIsCoachThinking(false); setCoachStatus(""); }
   };
 
@@ -399,7 +449,7 @@ const App: React.FC = () => {
   };
 
   const calculateAndSaveResistance = async () => {
-    if (resistanceSession.length === 0) { alert("請至少勾選一個項目"); return; }
+    if (resistanceSession.length === 0) { setStatusMessage({ type: 'error', text: "請至少勾選一個訓練項目" }); return; }
     setIsAnalyzing(true);
     setAnalysisStatus("AI 計算消耗中...");
 
@@ -441,7 +491,7 @@ const App: React.FC = () => {
       setInputModalType(null);
 
     } catch (e: unknown) {
-      alert("AI 計算發生錯誤: " + getErrorMessage(e));
+      setStatusMessage({ type: 'error', text: "AI 計算失敗：" + getErrorMessage(e) });
     } finally {
       setIsAnalyzing(false);
       setAnalysisStatus("");
@@ -455,20 +505,20 @@ const App: React.FC = () => {
   ): number | null => {
     const trimmed = value.trim();
     if (!trimmed) {
-      if (opts?.required) alert(`${label}為必填`);
+      if (opts?.required) setStatusMessage({ type: 'error', text: `${label}為必填` });
       return opts?.required ? null : null;
     }
     const num = Number(trimmed);
     if (!Number.isFinite(num)) {
-      alert(`${label}格式不正確`);
+      setStatusMessage({ type: 'error', text: `${label}格式不正確` });
       return null;
     }
     if (opts?.min !== undefined && num < opts.min) {
-      alert(`${label}不可小於 ${opts.min}`);
+      setStatusMessage({ type: 'error', text: `${label}不可小於 ${opts.min}` });
       return null;
     }
     if (opts?.max !== undefined && num > opts.max) {
-      alert(`${label}不可大於 ${opts.max}`);
+      setStatusMessage({ type: 'error', text: `${label}不可大於 ${opts.max}` });
       return null;
     }
     return num;
@@ -479,14 +529,15 @@ const App: React.FC = () => {
     const logDate = currentViewDate || getLocalISOString();
 
     if (type === 'manual') {
-      if (!manualForm.name.trim()) { alert("請填寫名稱"); return; }
-      if (!manualForm.val1.trim()) { alert("請填寫完整資訊"); return; }
+      if (!manualForm.name.trim()) { setStatusMessage({ type: 'error', text: "請填寫名稱" }); return; }
+      if (!manualForm.val1.trim()) { setStatusMessage({ type: 'error', text: inputModalType === 'water' ? "請填寫容量" : "請填寫熱量" }); return; }
 
       if (inputModalType === 'food') {
         const calories = parseNumber(manualForm.val1, '熱量', { min: 0, required: true });
         const protein = parseNumber(manualForm.val2 || '0', '蛋白質', { min: 0 }) ?? 0;
         const carbs = parseNumber(manualForm.val3 || '0', '碳水', { min: 0 }) ?? 0;
         const fat = parseNumber(manualForm.val4 || '0', '脂肪', { min: 0 }) ?? 0;
+        const fiber = parseNumber(manualForm.val5 || '0', '纖維', { min: 0 }) ?? 0;
         if (calories === null) return;
         const foodItem = {
           foodName: manualForm.name.trim(),
@@ -494,10 +545,12 @@ const App: React.FC = () => {
           protein: Math.round(protein),
           carbs: Math.round(carbs),
           fat: Math.round(fat),
+          fiber: Math.round(fiber),
           baseCalories: Math.round(calories),
           baseProtein: Math.round(protein),
           baseCarbs: Math.round(carbs),
           baseFat: Math.round(fat),
+          baseFiber: Math.round(fiber),
           portion: 1
         };
         if (addToFavorites) {
@@ -518,7 +571,7 @@ const App: React.FC = () => {
         if (addToFavorites) {
           setFavoriteWaterContainers(prev => [{
             id: now + 1, beverageName: manualForm.name.trim(), amount: Math.round(amount),
-            calories: Math.round(wCals), protein: Math.round(wPro), carbs: Math.round(wCarbs), fat: 0
+            calories: Math.round(wCals), protein: Math.round(wPro), carbs: Math.round(wCarbs), fat: 0, fiber: 0
           }, ...prev]);
         }
 
@@ -533,10 +586,12 @@ const App: React.FC = () => {
             protein: Math.round(wPro),
             carbs: Math.round(wCarbs),
             fat: 0,
+            fiber: 0, // 手動飲水表單沒有纖維欄位；高纖飲品請走 AI 分析
             baseCalories: Math.round(wCals),
             baseProtein: Math.round(wPro),
             baseCarbs: Math.round(wCarbs),
             baseFat: 0,
+            baseFiber: 0,
             baseAmount: Math.round(amount),
             amount: Math.round(amount),
             portion: 1,
@@ -559,13 +614,15 @@ const App: React.FC = () => {
           calories: analyzedFood.calories,
           protein: analyzedFood.protein,
           carbs: analyzedFood.carbs,
-          fat: analyzedFood.fat
+          fat: analyzedFood.fat,
+          fiber: analyzedFood.fiber
         }, ...prev]);
       }
       const finalCal = Math.round(analyzedFood.calories * portion);
       const finalPro = Math.round((analyzedFood.protein || 0) * portion);
       const finalCarbs = analyzedFood.carbs ? Math.round(analyzedFood.carbs * portion) : 0;
       const finalFat = analyzedFood.fat ? Math.round(analyzedFood.fat * portion) : 0;
+      const finalFiber = analyzedFood.fiber ? Math.round(analyzedFood.fiber * portion) : 0;
       const baseAmount = analyzedFood.amount && analyzedFood.amount > 0 ? Math.round(analyzedFood.amount) : undefined;
 
       setFoodLogs(p => [removeTransientImagePreview({
@@ -577,10 +634,12 @@ const App: React.FC = () => {
         protein: finalPro,
         carbs: finalCarbs,
         fat: finalFat,
+        fiber: finalFiber,
         baseCalories: Math.round(analyzedFood.calories || 0),
         baseProtein: Math.round(analyzedFood.protein || 0),
         baseCarbs: Math.round(analyzedFood.carbs || 0),
         baseFat: Math.round(analyzedFood.fat || 0),
+        baseFiber: Math.round(analyzedFood.fiber || 0),
         baseAmount,
         amount: baseAmount ? Math.round(baseAmount * portion) : undefined,
         notes: analyzedFood.notes,
@@ -608,7 +667,7 @@ const App: React.FC = () => {
     }
     else if (type === 'water' && analyzedWater) {
       if (addToFavorites) {
-        setFavoriteWaterContainers(prev => [{ id: now + 1, beverageName: analyzedWater.beverageName || '', amount: analyzedWater.amount, calories: analyzedWater.calories, protein: analyzedWater.protein, carbs: analyzedWater.carbs, fat: analyzedWater.fat }, ...prev]);
+        setFavoriteWaterContainers(prev => [{ id: now + 1, beverageName: analyzedWater.beverageName || '', amount: analyzedWater.amount, calories: analyzedWater.calories, protein: analyzedWater.protein, carbs: analyzedWater.carbs, fat: analyzedWater.fat, fiber: analyzedWater.fiber }, ...prev]);
       }
       const finalAmount = Math.round((analyzedWater.amount || 0) * portion);
       const isCaloric = (analyzedWater.calories ?? 0) > 0;
@@ -625,6 +684,7 @@ const App: React.FC = () => {
         protein: analyzedWater.protein,
         carbs: analyzedWater.carbs,
         fat: analyzedWater.fat,
+        fiber: analyzedWater.fiber,
         notes: analyzedWater.notes,
         imagePreview: analyzedWater.imagePreview,
         isText: analyzedWater.isText,
@@ -636,7 +696,8 @@ const App: React.FC = () => {
         const finalPro = Math.round((analyzedWater.protein || 0) * portion);
         const finalCarbs = Math.round((analyzedWater.carbs || 0) * portion);
         const finalFat = Math.round((analyzedWater.fat || 0) * portion);
-        setFoodLogs(p => [{ id: now + 2, linkId: linkId, date: logDate, type: 'food', foodName: analyzedWater.beverageName || '', calories: finalCal, protein: finalPro, carbs: finalCarbs, fat: finalFat, baseCalories: Math.round(analyzedWater.calories || 0), baseProtein: Math.round(analyzedWater.protein || 0), baseCarbs: Math.round(analyzedWater.carbs || 0), baseFat: Math.round(analyzedWater.fat || 0), baseAmount: Math.round(analyzedWater.amount || 0), portion: portion, isManual: true, amount: finalAmount }, ...p]);
+        const finalWaterFiber = Math.round((analyzedWater.fiber || 0) * portion);
+        setFoodLogs(p => [{ id: now + 2, linkId: linkId, date: logDate, type: 'food', foodName: analyzedWater.beverageName || '', calories: finalCal, protein: finalPro, carbs: finalCarbs, fat: finalFat, fiber: finalWaterFiber, baseCalories: Math.round(analyzedWater.calories || 0), baseProtein: Math.round(analyzedWater.protein || 0), baseCarbs: Math.round(analyzedWater.carbs || 0), baseFat: Math.round(analyzedWater.fat || 0), baseFiber: Math.round(analyzedWater.fiber || 0), baseAmount: Math.round(analyzedWater.amount || 0), portion: portion, isManual: true, amount: finalAmount }, ...p]);
       }
       setAnalyzedWater(null);
     }
@@ -679,7 +740,7 @@ const App: React.FC = () => {
 
   const handleWeightSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputWeight.trim()) { alert("請輸入體重"); return; }
+    if (!inputWeight.trim()) { setStatusMessage({ type: 'error', text: "請輸入體重" }); return; }
     const weight = parseNumber(inputWeight, '體重', { min: 1, required: true });
     if (weight === null) return;
     const bodyFat = inputBodyFat.trim() ? parseNumber(inputBodyFat, '體脂', { min: 0, max: 100 }) : null;
@@ -760,11 +821,13 @@ const App: React.FC = () => {
         protein: Math.round(base.protein * editingFoodPortion.portion),
         carbs: Math.round(base.carbs * editingFoodPortion.portion),
         fat: Math.round(base.fat * editingFoodPortion.portion),
+        fiber: Math.round(base.fiber * editingFoodPortion.portion),
         amount: nextAmount,
         baseCalories: base.calories,
         baseProtein: base.protein,
         baseCarbs: base.carbs,
         baseFat: base.fat,
+        baseFiber: base.fiber,
         baseAmount: base.amount
       };
     }));
@@ -780,7 +843,7 @@ const App: React.FC = () => {
   // 確認快速加水
   const confirmQuickWater = (amount: number) => {
     if (!Number.isFinite(amount) || amount <= 0) {
-      alert("飲水量需大於 0");
+      setStatusMessage({ type: 'error', text: "飲水量需大於 0" });
       return;
     }
     const logDate = currentViewDate || getLocalISOString();
@@ -798,7 +861,7 @@ const App: React.FC = () => {
 
   const today = getLocalISOString();
   const latestWeightLog = useMemo(() => sortByDateAndIdDesc(weightLogs)[0], [weightLogs]);
-  const dailyFood = useMemo(() => foodLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.calories || 0), pro: acc.pro + (c.protein || 0), carbs: acc.carbs + (c.carbs || 0), fat: acc.fat + (c.fat || 0) }), { cal: 0, pro: 0, carbs: 0, fat: 0 }), [foodLogs, currentViewDate]);
+  const dailyFood = useMemo(() => foodLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.calories || 0), pro: acc.pro + (c.protein || 0), carbs: acc.carbs + (c.carbs || 0), fat: acc.fat + (c.fat || 0), fib: acc.fib + (c.fiber || 0) }), { cal: 0, pro: 0, carbs: 0, fat: 0, fib: 0 }), [foodLogs, currentViewDate]);
   const dailyAct = useMemo(() => activityLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.activeCalories || 0) }), { cal: 0 }), [activityLogs, currentViewDate]);
   const dailyRes = useMemo(() => resistanceLogs.filter(l => l.date === currentViewDate).reduce((acc, c) => ({ cal: acc.cal + (c.totalCalories || 0) }), { cal: 0 }), [resistanceLogs, currentViewDate]);
   const dailyWater = useMemo(() => waterLogs.filter(l => l.date === currentViewDate).reduce((s, i) => s + (i.amount || 0), 0), [waterLogs, currentViewDate]);
@@ -980,9 +1043,9 @@ const App: React.FC = () => {
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
         <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">{APP_DISPLAY_VERSION}</span></h1>
         <div className="flex gap-2">
-          <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
-          <button onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center hover:text-teal-400 ${dataHealthIssues.length > 0 ? 'text-amber-400' : 'text-neutral-500'}`}><Icons.ScanEye /><span className="text-[10px] font-bold">CHECK</span></button>
-          <button onClick={handleTrainingExport} className="flex flex-col items-center text-teal-400 hover:text-teal-300"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold">TRAIN</span></button>
+          <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
+          <button onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-400 ${dataHealthIssues.length > 0 ? 'text-amber-400' : 'text-neutral-500'}`}><Icons.ScanEye /><span className="text-[10px] font-bold">CHECK</span></button>
+          <button onClick={handleTrainingExport} className="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] text-teal-400 hover:text-teal-300"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold">TRAIN</span></button>
         </div>
       </div>
 
@@ -1041,7 +1104,7 @@ const App: React.FC = () => {
                 <div className="text-xs font-bold text-teal-400 mb-1">調整食用份量</div>
                 <h3 className="text-lg font-bold text-white leading-snug">{editingFood.foodName}</h3>
               </div>
-              <button onClick={() => setEditingFoodPortion(null)} className="text-neutral-500 hover:text-white p-2">
+              <button onClick={() => setEditingFoodPortion(null)} className="text-neutral-400 hover:text-white active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <Icons.X className="w-5 h-5" />
               </button>
             </div>
@@ -1065,11 +1128,12 @@ const App: React.FC = () => {
                 <span>3.0</span>
               </div>
             </div>
-            <div className="grid grid-cols-4 text-center bg-neutral-950 border border-neutral-800 rounded-xl overflow-hidden mb-4">
-              <div className="p-3 border-r border-neutral-800"><div className="text-xs text-neutral-500">熱量</div><div className="font-bold text-orange-400">{Math.round(editingFoodBase.calories * editingFoodPortion.portion)}</div></div>
-              <div className="p-3 border-r border-neutral-800"><div className="text-xs text-neutral-500">蛋白</div><div className="font-bold text-blue-400">{Math.round(editingFoodBase.protein * editingFoodPortion.portion)}g</div></div>
-              <div className="p-3 border-r border-neutral-800"><div className="text-xs text-neutral-500">碳水</div><div className="font-bold text-yellow-400">{Math.round(editingFoodBase.carbs * editingFoodPortion.portion)}g</div></div>
-              <div className="p-3"><div className="text-xs text-neutral-500">脂肪</div><div className="font-bold text-green-400">{Math.round(editingFoodBase.fat * editingFoodPortion.portion)}g</div></div>
+            <div className="grid grid-cols-5 text-center bg-neutral-950 border border-neutral-800 rounded-xl overflow-hidden mb-4">
+              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">熱量</div><div className={`font-bold text-sm ${NUTRIENTS.calories.text}`}>{Math.round(editingFoodBase.calories * editingFoodPortion.portion)}</div></div>
+              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">蛋白</div><div className={`font-bold text-sm ${NUTRIENTS.protein.text}`}>{Math.round(editingFoodBase.protein * editingFoodPortion.portion)}g</div></div>
+              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">碳水</div><div className={`font-bold text-sm ${NUTRIENTS.carbs.text}`}>{Math.round(editingFoodBase.carbs * editingFoodPortion.portion)}g</div></div>
+              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">脂肪</div><div className={`font-bold text-sm ${NUTRIENTS.fat.text}`}>{Math.round(editingFoodBase.fat * editingFoodPortion.portion)}g</div></div>
+              <div className="p-2.5"><div className="text-[11px] text-neutral-400">纖維</div><div className={`font-bold text-sm ${NUTRIENTS.fiber.text}`}>{Math.round(editingFoodBase.fiber * editingFoodPortion.portion)}g</div></div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setEditingFoodPortion(null)} className="flex-1 py-4 border border-neutral-700 rounded-xl font-bold text-neutral-400 hover:bg-neutral-800">取消</button>
@@ -1178,7 +1242,7 @@ const App: React.FC = () => {
 
             {/* Analysis Result Modal */}
             {/* Analysis Result */}
-            <div ref={analysisResultRef}>
+            <div ref={analysisResultRef} className="scroll-anchor">
               <AnalysisResult
                 analyzedFood={analyzedFood}
                 analyzedActivity={analyzedActivity}

@@ -2,11 +2,12 @@ import React from 'react';
 import { Icons } from '../Icons';
 import { WaterCup } from '../ui/WaterCup';
 import { CONFIG } from '../../lib/config';
+import { NUTRIENTS, type NutrientStyle } from '../../lib/nutrientTheme';
 
 interface DashboardCardProps {
   remaining: number;
   dailyTarget: number;
-  dailyFood: { cal: number; pro: number; carbs: number; fat: number };
+  dailyFood: { cal: number; pro: number; carbs: number; fat: number; fib: number };
   dailyAct: { cal: number };
   dailyRes: { cal: number };
   dailyWater: number;
@@ -67,7 +68,27 @@ const CircularProgress: React.FC<{ remaining: number; total: number }> = ({ rema
         <div className={`text-2xl font-extrabold ${remaining < 0 ? 'text-red-500' : 'text-white'}`}>
           {remaining}
         </div>
-        <div className="text-[10px] text-neutral-500 font-bold">KCAL</div>
+        <div className="text-[10px] text-neutral-400 font-bold">KCAL</div>
+      </div>
+    </div>
+  );
+};
+
+// 營養素進度條。四個營養素共用同一個元件，避免各自複製貼上後樣式走鐘。
+const MacroBar: React.FC<{
+  nutrient: NutrientStyle;
+  current: number;
+  target: number;
+}> = ({ nutrient, current, target }) => {
+  const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span className="text-neutral-400 font-medium">{nutrient.label}</span>
+        <span className={`${nutrient.barText} font-bold`}>{current} / {target}g</span>
+      </div>
+      <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
+        <div className={`h-full ${nutrient.bar} transition-all duration-500 ease-out`} style={{ width: `${pct}%` }}></div>
       </div>
     </div>
   );
@@ -101,7 +122,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
         </div>
         {/* 右側：每日目標 */}
         <div className="text-right flex flex-col items-end">
-          <div className="text-xs text-neutral-500">每日可消耗</div>
+          <div className="text-xs text-neutral-400">每日可消耗</div>
           <button onClick={() => openTargetModal('daily')} className="text-sm font-bold text-teal-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 mt-1 border border-neutral-700">
             {dailyTarget} <Icons.Edit className="w-3 h-3" />
           </button>
@@ -125,34 +146,11 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
           onLongPress={onQuickAddWater}
         />
       </div>
-      <div className="mt-5 space-y-3">
-        <div>
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-neutral-400 font-medium">蛋白質攝取</span>
-            <span className="text-blue-300 font-bold">{dailyFood.pro} / {CONFIG.PRO_TARGET}g</span>
-          </div>
-          <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500" style={{ width: `${Math.min((dailyFood.pro / CONFIG.PRO_TARGET) * 100, 100)}%` }}></div>
-          </div>
-        </div>
-        <div>
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-neutral-400 font-medium">碳水化合物攝取</span>
-            <span className="text-yellow-300 font-bold">{dailyFood.carbs} / {CONFIG.CARB_TARGET}g</span>
-          </div>
-          <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
-            <div className="h-full bg-yellow-500" style={{ width: `${Math.min((dailyFood.carbs / CONFIG.CARB_TARGET) * 100, 100)}%` }}></div>
-          </div>
-        </div>
-        <div>
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-neutral-400 font-medium">脂肪攝取</span>
-            <span className="text-green-300 font-bold">{dailyFood.fat} / {CONFIG.FAT_TARGET}g</span>
-          </div>
-          <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
-            <div className="h-full bg-green-500" style={{ width: `${Math.min((dailyFood.fat / CONFIG.FAT_TARGET) * 100, 100)}%` }}></div>
-          </div>
-        </div>
+      <div className="mt-5 space-y-2.5">
+        <MacroBar nutrient={NUTRIENTS.protein} current={dailyFood.pro} target={CONFIG.PRO_TARGET} />
+        <MacroBar nutrient={NUTRIENTS.carbs} current={dailyFood.carbs} target={CONFIG.CARB_TARGET} />
+        <MacroBar nutrient={NUTRIENTS.fat} current={dailyFood.fat} target={CONFIG.FAT_TARGET} />
+        <MacroBar nutrient={NUTRIENTS.fiber} current={dailyFood.fib} target={CONFIG.FIBER_TARGET} />
       </div>
     </div>
   );

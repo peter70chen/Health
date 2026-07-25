@@ -31,10 +31,12 @@ export interface FoodLog {
     protein?: number;
     carbs?: number;
     fat?: number;
+    fiber?: number;
     baseCalories?: number;
     baseProtein?: number;
     baseCarbs?: number;
     baseFat?: number;
+    baseFiber?: number;
     baseAmount?: number;
     portion?: number;
     amount?: number;
@@ -73,6 +75,7 @@ export interface WaterLog {
     protein?: number;
     carbs?: number;
     fat?: number;
+    fiber?: number;
     isManual?: boolean;
     isHidden?: boolean;
     notes?: string;
@@ -99,8 +102,11 @@ export interface AnalyzedFood {
     protein?: number;
     carbs?: number;
     fat?: number;
+    fiber?: number;
     amount?: number;
     notes?: string;
+    /** AI 對這次辨識的把握程度，用來提醒使用者是否需人工微調 */
+    confidence?: 'high' | 'medium' | 'low';
     imagePreview?: string;
     isText?: boolean;
     warnings?: string[];
@@ -126,6 +132,7 @@ export interface AnalyzedWater {
     protein?: number;
     carbs?: number;
     fat?: number;
+    fiber?: number;
     notes?: string;
     imagePreview?: string;
     isText?: boolean;
@@ -140,6 +147,7 @@ export interface FavoriteFood {
     protein?: number;
     carbs?: number;
     fat?: number;
+    fiber?: number;
 }
 
 // Favorite Water Container
@@ -151,6 +159,7 @@ export interface FavoriteWaterContainer {
     protein?: number;
     carbs?: number;
     fat?: number;
+    fiber?: number;
 }
 
 // Manual Form State
@@ -160,6 +169,8 @@ export interface ManualFormState {
     val2: string;
     val3: string;
     val4: string;
+    /** 食物：膳食纖維 (g)。其他類型未使用。 */
+    val5: string;
 }
 
 // Confirm Modal State

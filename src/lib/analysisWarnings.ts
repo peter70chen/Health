@@ -1,5 +1,24 @@
 import type { AnalyzedActivity, AnalyzedFood, AnalyzedWater } from '../types';
 
+/**
+ * 正規化 AI 回傳的 confidence。
+ *
+ * Gemini 不保證遵守大小寫，可能回 "High" / "HIGH" / "high confidence" / 亂填。
+ * 若直接用 `!== 'high'` 判斷，一個高把握的結果會被誤標成「把握度中等，建議微調」——
+ * 對醫療使用者是誤導資訊。無法辨識的值一律回 undefined（徽章隱藏），
+ * 寧可不顯示，也不要顯示錯的把握度。
+ */
+export const normalizeConfidence = (value: unknown): AnalyzedFood['confidence'] => {
+  const text = String(value ?? '').trim().toLowerCase();
+  // 用詞界比對而非 startsWith：startsWith('high') 會把 "highly uncertain"
+  // 判成高把握（徽章直接不顯示），剛好把最需要提醒的情況吃掉。
+  // `\b` 讓 "high" / "high confidence" 命中，"highly" 不命中。
+  if (/^high\b/.test(text)) return 'high';
+  if (/^(medium|mid|moderate)\b/.test(text)) return 'medium';
+  if (/^low\b/.test(text)) return 'low';
+  return undefined;
+};
+
 const macroCalories = (protein = 0, carbs = 0, fat = 0): number =>
   protein * 4 + carbs * 4 + fat * 9;
 
@@ -9,6 +28,7 @@ export const getFoodWarnings = (food: AnalyzedFood): string[] => {
   const protein = food.protein || 0;
   const carbs = food.carbs || 0;
   const fat = food.fat || 0;
+  const fiber = food.fiber || 0;
   const estimatedMacroCalories = macroCalories(protein, carbs, fat);
 
   if (!food.foodName?.trim()) warnings.push('食物名稱缺漏：AI 沒有明確辨識出食物名稱。');
@@ -18,6 +38,8 @@ export const getFoodWarnings = (food: AnalyzedFood): string[] => {
   if (protein > 120) warnings.push('蛋白質偏高：單筆蛋白質超過 120g，可能被 AI 高估。');
   if (carbs > 250) warnings.push('碳水偏高：單筆碳水超過 250g，請確認份量。');
   if (fat > 120) warnings.push('脂肪偏高：單筆脂肪超過 120g，請確認是否合理。');
+  if (fiber > 40) warnings.push('纖維偏高：單筆膳食纖維超過 40g，AI 容易高估纖維，請確認。');
+  if (fiber > 0 && fiber > carbs) warnings.push('纖維大於碳水：膳食纖維本身計入碳水，數值不合理，建議調低纖維。');
   if (calories > 0 && estimatedMacroCalories > 0) {
     const diffRatio = Math.abs(estimatedMacroCalories - calories) / calories;
     if (diffRatio > 0.45) {

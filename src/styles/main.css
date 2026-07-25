@@ -9,6 +9,49 @@
   box-sizing: border-box;
 }
 
+/*
+ * Sticky chrome 高度：header (55px) + tab bar (56px) + 瀏海安全區。
+ * 55px 這個數字已被 App.tsx 的 tab bar `top-[calc(55px+...)]` 使用，兩者一致。
+ * 任何用 scrollIntoView 捲過去的目標都該掛 .scroll-anchor，
+ * 否則會被上方這兩層 sticky 蓋住。
+ */
+:root {
+  --sticky-offset: calc(111px + env(safe-area-inset-top));
+
+  /*
+   * sticky 行動按鈕列的底部留白。
+   * PWA（加到主畫面）模式：safe-area-inset-bottom 就是 home indicator 高度，夠用。
+   * Safari 一般分頁：底部網址列/工具列會overlay在 layout viewport 上，
+   * 只留 safe-area 的話「確認加入」會被工具列蓋住半截 —— 正是我們要解決的痛點。
+   * 因此分頁模式多留一段，寧可多一點空白也不要按鈕被蓋住。
+   */
+  --action-bar-pad: calc(env(safe-area-inset-bottom) + 1.25rem);
+}
+
+/*
+ * 限縮在「觸控裝置的瀏覽器分頁模式」才加大留白：
+ * 桌機用瀏覽器分頁看沒有底部工具列遮擋問題，不該平白多吃 44px 空白。
+ *
+ * ⚠️ 這是根據 iOS Safari 工具列高度推估的經驗值緩解，**尚未在真 iPhone 上驗證**。
+ * Playwright 跑的是 Chromium desktop，量不到 iOS 工具列，所以那組 e2e 測試
+ * 並不能證明這一項有效。真機實測前請勿宣稱此項已解決。
+ */
+@media (display-mode: browser) and (pointer: coarse) {
+  :root {
+    --action-bar-pad: calc(env(safe-area-inset-bottom) + 2.75rem);
+  }
+}
+
+.scroll-anchor {
+  /*
+   * 多留 1rem：AI 分析結果卡的「AI 分析結果」標籤是 absolute -top-3，
+   * 掛在卡片本體「外面」。只算卡片頂端的話那個標籤會被分頁列切掉一半
+   * （2026-07-25 真機截圖確認）。
+   */
+  scroll-margin-top: calc(var(--sticky-offset) + 1rem);
+  scroll-margin-bottom: 1.5rem;
+}
+
 body {
   font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #000000;
@@ -50,14 +93,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* Animations */
+/*
+ * 只用 opacity，刻意不用 transform: scale()。
+ * 有 transform 的元素會成為子孫 position:sticky 的 containing block，
+ * 導致 AnalysisResult 的 sticky 按鈕列在動畫的 0.3 秒內被釘在卡片底部（畫面外），
+ * 動畫結束後才「跳」回視窗底部。拿掉 scale 就沒有這個閃跳。
+ */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: scale(0.98);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
