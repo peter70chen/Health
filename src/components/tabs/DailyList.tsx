@@ -37,7 +37,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
             </div>
             <div>
               <span className="font-bold text-neutral-200 text-base">食物記錄</span>
-              <span className="ml-2 text-sm text-neutral-500">
+              <span className="ml-2 text-sm text-neutral-400">
                 ({foodList.length} 筆{totalFoodCalories > 0 && `, +${totalFoodCalories} kcal`})
               </span>
             </div>
@@ -70,15 +70,15 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => onEditFoodPortion(l)} className="text-neutral-500 p-2 hover:text-teal-400 active:scale-90 transition-transform" aria-label="調整份量">
+                  <button onClick={() => onEditFoodPortion(l)} className="text-neutral-400 hover:text-teal-400 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="調整份量">
                     <Icons.Edit className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setConfirmModal({ id: l.id, type: 'food' })} className="text-neutral-600 p-2 hover:text-red-500 active:scale-90 transition-transform" aria-label="刪除食物">
+                  <button onClick={() => setConfirmModal({ id: l.id, type: 'food' })} className="text-neutral-500 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="刪除食物">
                     <Icons.Trash className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-            )) : <div className="text-center py-4 text-neutral-600 text-sm mt-2">今天還沒有食物記錄</div>}
+            )) : <div className="text-center py-4 text-neutral-500 text-sm mt-2">今天還沒有食物記錄</div>}
           </div>
         )}
       </div>
@@ -95,7 +95,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
             </div>
             <div>
               <span className="font-bold text-neutral-200 text-base">飲水記錄</span>
-              <span className="ml-2 text-sm text-neutral-500">
+              <span className="ml-2 text-sm text-neutral-400">
                 ({waterList.length} 筆{totalWaterAmount > 0 && `, ${totalWaterAmount} ml`})
               </span>
             </div>
@@ -120,11 +120,11 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setConfirmModal({ id: l.id, type: 'water' })} className="text-neutral-600 p-2 hover:text-red-500 active:scale-90 transition-transform">
+                <button onClick={() => setConfirmModal({ id: l.id, type: 'water' })} className="text-neutral-500 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
                   <Icons.Trash className="w-4 h-4" />
                 </button>
               </div>
-            )) : <div className="text-center py-4 text-neutral-600 text-sm mt-2">今天還沒有飲水記錄</div>}
+            )) : <div className="text-center py-4 text-neutral-500 text-sm mt-2">今天還沒有飲水記錄</div>}
           </div>
         )}
       </div>
@@ -141,7 +141,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
             </div>
             <div>
               <span className="font-bold text-neutral-200 text-base">運動記錄</span>
-              <span className="ml-2 text-sm text-neutral-500">
+              <span className="ml-2 text-sm text-neutral-400">
                 ({activityList.length} 筆{totalActivityCalories > 0 && `, -${totalActivityCalories} kcal`})
               </span>
             </div>
@@ -167,18 +167,18 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setConfirmModal({ id: l.id, type: l._source === 'resistance' ? 'resistanceLog' : 'activity' })} className="text-neutral-600 p-2 hover:text-red-500 active:scale-90 transition-transform">
+                <button onClick={() => setConfirmModal({ id: l.id, type: l._source === 'resistance' ? 'resistanceLog' : 'activity' })} className="text-neutral-500 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
                   <Icons.Trash className="w-4 h-4" />
                 </button>
               </div>
-            )) : <div className="text-center py-4 text-neutral-600 text-sm mt-2">今天還沒有運動記錄</div>}
+            )) : <div className="text-center py-4 text-neutral-500 text-sm mt-2">今天還沒有運動記錄</div>}
           </div>
         )}
       </div>
 
       {/* Empty state for all */}
       {!hasAnyRecords && (
-        <div className="text-center py-10 text-neutral-500 text-sm">
+        <div className="text-center py-10 text-neutral-400 text-sm">
           今天還沒有任何記錄喔！<br />點擊上方按鈕開始記錄吧 ✨
         </div>
       )}

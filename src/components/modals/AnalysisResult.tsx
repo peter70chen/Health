@@ -210,7 +210,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         因此不論卡片多長（warnings / notes 長度不定）、也不論捲到哪裡，
         「取消 / 確認加入」永遠可見可點。-mx-5/-mb-5 抵銷卡片的 p-5 讓它貼齊卡片邊緣。
       */}
-      <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-800 rounded-b-2xl flex gap-3">
+      <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pt-3 pb-[var(--action-bar-pad)] bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-800 rounded-b-2xl flex gap-3">
         <button onClick={() => { setAnalyzedFood(null); setAnalyzedActivity(null); setAnalyzedWater(null) }} className="flex-1 py-4 text-base border border-neutral-700 rounded-xl font-bold text-neutral-400 hover:bg-neutral-800 active:scale-95 transition-all">取消</button>
         <button onClick={() => saveLog(analyzedFood ? 'food' : (analyzedWater ? 'water' : 'activity'))} className="flex-[2] py-4 text-base bg-teal-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-500 shadow-md active:scale-95 transition-all">
           <Icons.Save className="w-5 h-5" /> 確認加入

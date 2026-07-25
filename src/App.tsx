@@ -6,7 +6,7 @@ import { InputModal, SettingsPanel, ConfirmModal, TargetModal, AnalysisResult, D
 import { QuickWaterModal } from './components/modals/QuickWaterModal';
 import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, WeightForm, WeightList, WeightHistory } from './components/tabs';
 import { callGeminiWithFallback } from './services/gemini';
-import { getActivityWarnings, getFoodWarnings, getWaterWarnings } from './lib/analysisWarnings';
+import { getActivityWarnings, getFoodWarnings, getWaterWarnings, normalizeConfidence } from './lib/analysisWarnings';
 import { getDataHealthIssues } from './lib/dataHealth';
 import { PROMPTS } from './lib/prompts';
 import { CONFIG, STORAGE_KEYS } from './lib/config';
@@ -130,7 +130,7 @@ const App: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useAutoClearStatus(statusMessage, setStatusMessage, 3000);
-  const isUserScrolling = useUserScrolling();
+  const userScroll = useUserScrolling();
 
   useHydrateFromStorage({
     setWeightLogs,
@@ -199,11 +199,29 @@ const App: React.FC = () => {
   // block:'start' + .scroll-anchor 的 scroll-margin-top 負責避開 header/tab bar；
   // 卡片底部的行動按鈕由 AnalysisResult 自己的 sticky footer 負責，
   // 所以這裡不需要（也不該）試圖把整張長卡片捲進畫面。
+  //
+  // 若結果剛好在使用者手滑（或 iOS 慣性捲動）期間落地，不硬搶畫面，
+  // 而是等他停下來再補捲一次；最多等 5 秒就放棄，避免無限等待。
   useEffect(() => {
     if (!analyzedFood && !analyzedActivity && !analyzedWater) return;
-    if (isUserScrolling.current) return; // 使用者正在自己滑，別搶
-    scrollIntoViewSmart(analysisResultRef.current, 'start');
-  }, [analyzedFood, analyzedActivity, analyzedWater, isUserScrolling]);
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const deadline = Date.now() + 5000;
+
+    const attempt = () => {
+      if (cancelled) return;
+      if (userScroll.isActive.current && Date.now() < deadline) {
+        timer = setTimeout(attempt, 300);
+        return;
+      }
+      userScroll.suppress(); // 別把自己的 smooth scroll 誤判成使用者操作
+      scrollIntoViewSmart(analysisResultRef.current, 'start');
+    };
+
+    timer = setTimeout(attempt, 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [analyzedFood, analyzedActivity, analyzedWater, userScroll]);
 
   const openTargetModal = (type: 'daily' | 'activity') => {
     setTargetModal({ type, value: type === 'daily' ? dailyTarget : activityTarget });
@@ -295,7 +313,7 @@ const App: React.FC = () => {
         else prompt = PROMPTS.waterImage;
         prompt = prompt.replace('{{NOTES}}', imageNotes);
       } else {
-        if (!manualText.trim()) { alert("請輸入描述"); setIsAnalyzing(false); return; }
+        if (!manualText.trim()) { setStatusMessage({ type: 'error', text: "請先輸入描述或選擇照片" }); setIsAnalyzing(false); return; }
         if (currentType === 'water') {
           prompt = PROMPTS.waterText.replace('{{TEXT}}', manualText);
         } else {
@@ -309,7 +327,8 @@ const App: React.FC = () => {
       setAnalyzedFood(null); setAnalyzedActivity(null); setAnalyzedWater(null);
       if (currentType === 'food') {
         const food = obj as AnalyzedFood;
-        setAnalyzedFood({ ...food, warnings: getFoodWarnings(food) });
+        // AI 的 confidence 大小寫/措辭不可靠，正規化後才進 state
+        setAnalyzedFood({ ...food, confidence: normalizeConfidence(food.confidence), warnings: getFoodWarnings(food) });
       }
       else if (currentType === 'activity') {
         const activity = obj as AnalyzedActivity;
@@ -321,7 +340,7 @@ const App: React.FC = () => {
       }
       setManualText(''); setImageNotes('');
       setInputModalType(null);
-    } catch (e: unknown) { alert("分析失敗：\n" + getErrorMessage(e)); }
+    } catch (e: unknown) { setStatusMessage({ type: 'error', text: "分析失敗：" + getErrorMessage(e) }); }
     finally { setIsAnalyzing(false); setAnalysisStatus(""); }
   };
 
@@ -337,6 +356,16 @@ const App: React.FC = () => {
       const recentActivity = activityLogs.filter(l => new Date(l.date) >= sevenDaysAgo);
       const totalIn = recentFood.reduce((s, i) => s + (i.calories || 0), 0);
       const totalOut = recentActivity.reduce((s, i) => s + (i.activeCalories || 0), 0);
+      // 日均營養素：讓教練的建議能真的反映纖維/蛋白是否達標，而不是只看熱量
+      const macroTotals = recentFood.reduce(
+        (acc, i) => ({
+          pro: acc.pro + (i.protein || 0),
+          carbs: acc.carbs + (i.carbs || 0),
+          fat: acc.fat + (i.fat || 0),
+          fiber: acc.fiber + (i.fiber || 0)
+        }),
+        { pro: 0, carbs: 0, fat: 0, fiber: 0 }
+      );
       const latestWeightLog = sortByDateAndIdDesc(weightLogs)[0];
       const startW = recentWeights.length > 0 ? recentWeights[0].weight : (latestWeightLog?.weight || CONFIG.START_W);
       const endW = recentWeights.length > 0 ? recentWeights[recentWeights.length - 1].weight : startW;
@@ -354,10 +383,16 @@ const App: React.FC = () => {
         .replace('{{avgIn}}', String(Math.round(totalIn / 7)))
         .replace('{{totalOut}}', String(totalOut))
         .replace('{{avgOut}}', String(Math.round(totalOut / 7)))
+        .replace('{{avgPro}}', String(Math.round(macroTotals.pro / 7)))
+        .replace('{{avgCarbs}}', String(Math.round(macroTotals.carbs / 7)))
+        .replace('{{avgFat}}', String(Math.round(macroTotals.fat / 7)))
+        .replace('{{avgFiber}}', String(Math.round(macroTotals.fiber / 7)))
+        .replace('{{proTarget}}', String(CONFIG.PRO_TARGET))
+        .replace('{{fiberTarget}}', String(CONFIG.FIBER_TARGET))
         .replace('{{dose}}', String(currentDose));
       const res = await callGeminiWithFallback<{ advice?: string; reply?: string }>(prompt, null, setCoachStatus, apiKeys);
       setCoachAdvice(res.advice || res.reply || '');
-    } catch (e: unknown) { alert("發生錯誤：" + getErrorMessage(e)); }
+    } catch (e: unknown) { setStatusMessage({ type: 'error', text: "教練分析失敗：" + getErrorMessage(e) }); }
     finally { setIsCoachThinking(false); setCoachStatus(""); }
   };
 
@@ -406,7 +441,7 @@ const App: React.FC = () => {
   };
 
   const calculateAndSaveResistance = async () => {
-    if (resistanceSession.length === 0) { alert("請至少勾選一個項目"); return; }
+    if (resistanceSession.length === 0) { setStatusMessage({ type: 'error', text: "請至少勾選一個訓練項目" }); return; }
     setIsAnalyzing(true);
     setAnalysisStatus("AI 計算消耗中...");
 
@@ -448,7 +483,7 @@ const App: React.FC = () => {
       setInputModalType(null);
 
     } catch (e: unknown) {
-      alert("AI 計算發生錯誤: " + getErrorMessage(e));
+      setStatusMessage({ type: 'error', text: "AI 計算失敗：" + getErrorMessage(e) });
     } finally {
       setIsAnalyzing(false);
       setAnalysisStatus("");
@@ -462,20 +497,20 @@ const App: React.FC = () => {
   ): number | null => {
     const trimmed = value.trim();
     if (!trimmed) {
-      if (opts?.required) alert(`${label}為必填`);
+      if (opts?.required) setStatusMessage({ type: 'error', text: `${label}為必填` });
       return opts?.required ? null : null;
     }
     const num = Number(trimmed);
     if (!Number.isFinite(num)) {
-      alert(`${label}格式不正確`);
+      setStatusMessage({ type: 'error', text: `${label}格式不正確` });
       return null;
     }
     if (opts?.min !== undefined && num < opts.min) {
-      alert(`${label}不可小於 ${opts.min}`);
+      setStatusMessage({ type: 'error', text: `${label}不可小於 ${opts.min}` });
       return null;
     }
     if (opts?.max !== undefined && num > opts.max) {
-      alert(`${label}不可大於 ${opts.max}`);
+      setStatusMessage({ type: 'error', text: `${label}不可大於 ${opts.max}` });
       return null;
     }
     return num;
@@ -486,8 +521,8 @@ const App: React.FC = () => {
     const logDate = currentViewDate || getLocalISOString();
 
     if (type === 'manual') {
-      if (!manualForm.name.trim()) { alert("請填寫名稱"); return; }
-      if (!manualForm.val1.trim()) { alert("請填寫完整資訊"); return; }
+      if (!manualForm.name.trim()) { setStatusMessage({ type: 'error', text: "請填寫名稱" }); return; }
+      if (!manualForm.val1.trim()) { setStatusMessage({ type: 'error', text: inputModalType === 'water' ? "請填寫容量" : "請填寫熱量" }); return; }
 
       if (inputModalType === 'food') {
         const calories = parseNumber(manualForm.val1, '熱量', { min: 0, required: true });
@@ -528,7 +563,7 @@ const App: React.FC = () => {
         if (addToFavorites) {
           setFavoriteWaterContainers(prev => [{
             id: now + 1, beverageName: manualForm.name.trim(), amount: Math.round(amount),
-            calories: Math.round(wCals), protein: Math.round(wPro), carbs: Math.round(wCarbs), fat: 0
+            calories: Math.round(wCals), protein: Math.round(wPro), carbs: Math.round(wCarbs), fat: 0, fiber: 0
           }, ...prev]);
         }
 
@@ -697,7 +732,7 @@ const App: React.FC = () => {
 
   const handleWeightSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputWeight.trim()) { alert("請輸入體重"); return; }
+    if (!inputWeight.trim()) { setStatusMessage({ type: 'error', text: "請輸入體重" }); return; }
     const weight = parseNumber(inputWeight, '體重', { min: 1, required: true });
     if (weight === null) return;
     const bodyFat = inputBodyFat.trim() ? parseNumber(inputBodyFat, '體脂', { min: 0, max: 100 }) : null;
@@ -800,7 +835,7 @@ const App: React.FC = () => {
   // 確認快速加水
   const confirmQuickWater = (amount: number) => {
     if (!Number.isFinite(amount) || amount <= 0) {
-      alert("飲水量需大於 0");
+      setStatusMessage({ type: 'error', text: "飲水量需大於 0" });
       return;
     }
     const logDate = currentViewDate || getLocalISOString();
@@ -1061,7 +1096,7 @@ const App: React.FC = () => {
                 <div className="text-xs font-bold text-teal-400 mb-1">調整食用份量</div>
                 <h3 className="text-lg font-bold text-white leading-snug">{editingFood.foodName}</h3>
               </div>
-              <button onClick={() => setEditingFoodPortion(null)} className="text-neutral-500 hover:text-white p-2">
+              <button onClick={() => setEditingFoodPortion(null)} className="text-neutral-400 hover:text-white active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <Icons.X className="w-5 h-5" />
               </button>
             </div>

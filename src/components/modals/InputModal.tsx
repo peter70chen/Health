@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Icons } from '../Icons';
 import { SortableItem } from '../ui/SortableItem';
+import { scrollFieldIntoView } from '../../lib/scroll';
 import {
   DndContext,
   DragOverlay,
@@ -184,14 +185,16 @@ export const InputModal: React.FC<InputModalProps> = ({
         </div>
         <div onClick={() => selectFavorite(fav)} className="flex-1 cursor-pointer">
           <div className="font-bold text-neutral-200">{fav.foodName}</div>
-          <div className="text-xs text-neutral-400 mt-1 flex gap-2">
+          <div className="text-xs text-neutral-400 mt-1 flex flex-wrap gap-x-2">
             <span className="text-orange-400">{fav.calories} kcal</span>
-            <span className="text-blue-400">P:{fav.protein}</span>
-            <span className="text-yellow-400">C:{fav.carbs}</span>
+            <span className="text-blue-400">P:{fav.protein || 0}</span>
+            <span className="text-amber-400">C:{fav.carbs || 0}</span>
+            <span className="text-green-400">F:{fav.fat || 0}</span>
+            <span className="text-lime-400">纖:{fav.fiber || 0}</span>
           </div>
         </div>
       </div>
-      <button onClick={(e) => deleteFavorite(fav.id, e)} className="p-2 text-neutral-500 hover:text-red-500"><Icons.Trash className="w-4 h-4" /></button>
+      <button onClick={(e) => deleteFavorite(fav.id, e)} className="text-neutral-400 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
     </div>
   );
 
@@ -209,7 +212,7 @@ export const InputModal: React.FC<InputModalProps> = ({
           </div>
         </div>
       </div>
-      <button onClick={(e) => deleteFavorite(fav.id, e)} className="p-2 text-neutral-500 hover:text-red-500"><Icons.Trash className="w-4 h-4" /></button>
+      <button onClick={(e) => deleteFavorite(fav.id, e)} className="text-neutral-400 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
     </div>
   );
 
@@ -228,7 +231,7 @@ export const InputModal: React.FC<InputModalProps> = ({
             </div>
             <span className={`text-sm font-bold cursor-pointer ${isChecked ? 'text-white' : 'text-neutral-400'}`} onClick={() => toggleResistanceItem(def)}>{def.name}</span>
           </label>
-          <button onClick={(e) => handleDeleteResistanceDef(def.id, e)} className="text-neutral-600 hover:text-red-500"><Icons.Trash className="w-3.5 h-3.5" /></button>
+          <button onClick={(e) => handleDeleteResistanceDef(def.id, e)} className="text-neutral-400 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
         </div>
 
         {isChecked && (
@@ -260,7 +263,7 @@ export const InputModal: React.FC<InputModalProps> = ({
             <h3 className="font-bold text-xl text-white">
               {inputModalType === 'food' ? '記錄飲食' : (inputModalType === 'water' ? '記錄飲水' : '記錄運動')}
             </h3>
-            <button onClick={() => setInputModalType(null)} className="text-neutral-400 p-2"><Icons.X /></button>
+            <button onClick={() => setInputModalType(null)} className="text-neutral-300 hover:text-white active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.X /></button>
           </div>
 
           <div className="flex bg-neutral-800 p-1 rounded-xl">
@@ -370,27 +373,27 @@ export const InputModal: React.FC<InputModalProps> = ({
                     </div>
                   )}
                 </div>
-                <input type="text" value={manualForm.name} onChange={e => setManualForm(p => ({ ...p, name: e.target.value }))} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder={inputModalType === 'food' ? "例如：牛肉麵" : (inputModalType === 'water' ? "例如：保溫瓶" : "例如：游泳")} />
+                <input type="text" value={manualForm.name} onChange={e => setManualForm(p => ({ ...p, name: e.target.value }))} onFocus={scrollFieldIntoView} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder={inputModalType === 'food' ? "例如：牛肉麵" : (inputModalType === 'water' ? "例如：保溫瓶" : "例如：游泳")} />
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="block text-sm font-bold text-neutral-400 mb-1">{inputModalType === 'food' ? '熱量 (kcal)' : (inputModalType === 'water' ? '容量 (ml)' : '消耗 (kcal)')}</label>
-                  <input type="number" value={manualForm.val1} onChange={e => setManualForm(p => ({ ...p, val1: e.target.value }))} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder="0" />
+                  <input type="number" value={manualForm.val1} onChange={e => setManualForm(p => ({ ...p, val1: e.target.value }))} onFocus={scrollFieldIntoView} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder="0" />
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-bold text-neutral-400 mb-1">{inputModalType === 'food' ? '蛋白質 (g)' : (inputModalType === 'water' ? '熱量 (kcal)' : '時間 (分)')}</label>
-                  <input type="number" value={manualForm.val2} onChange={e => setManualForm(p => ({ ...p, val2: e.target.value }))} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder="0" />
+                  <input type="number" value={manualForm.val2} onChange={e => setManualForm(p => ({ ...p, val2: e.target.value }))} onFocus={scrollFieldIntoView} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder="0" />
                 </div>
               </div>
               {(inputModalType === 'food') && (
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <label className="block text-sm font-bold text-neutral-400 mb-1">碳水 (g)</label>
-                    <input type="number" value={manualForm.val3} onChange={e => setManualForm(p => ({ ...p, val3: e.target.value }))} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder="0" />
+                    <input type="number" value={manualForm.val3} onChange={e => setManualForm(p => ({ ...p, val3: e.target.value }))} onFocus={scrollFieldIntoView} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder="0" />
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-bold text-neutral-400 mb-1">脂肪 (g)</label>
-                    <input type="number" value={manualForm.val4} onChange={e => setManualForm(p => ({ ...p, val4: e.target.value }))} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder="0" />
+                    <input type="number" value={manualForm.val4} onChange={e => setManualForm(p => ({ ...p, val4: e.target.value }))} onFocus={scrollFieldIntoView} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-teal-500 text-white" placeholder="0" />
                   </div>
                 </div>
               )}
@@ -398,7 +401,7 @@ export const InputModal: React.FC<InputModalProps> = ({
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <label className="block text-sm font-bold text-neutral-400 mb-1">膳食纖維 (g)</label>
-                    <input type="number" value={manualForm.val5} onChange={e => setManualForm(p => ({ ...p, val5: e.target.value }))} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-lime-500 text-white" placeholder="0" />
+                    <input type="number" value={manualForm.val5} onChange={e => setManualForm(p => ({ ...p, val5: e.target.value }))} onFocus={scrollFieldIntoView} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none focus:border-lime-500 text-white" placeholder="0" />
                   </div>
                   <div className="flex-1" aria-hidden="true" />
                 </div>
@@ -411,7 +414,13 @@ export const InputModal: React.FC<InputModalProps> = ({
                   <label className="text-sm text-neutral-300 font-bold cursor-pointer select-none">加入常用{inputModalType === 'water' ? '容器' : '食物'}</label>
                 </div>
               )}
-              <button onClick={() => saveLog('manual')} className="w-full bg-teal-600 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-base mt-2 hover:bg-teal-500 active:scale-[0.98] transition-all"><Icons.Check /> 加入紀錄</button>
+              {/*
+                手動表單加入纖維欄後更長，iOS 鍵盤彈出時很容易蓋住送出鈕。
+                sticky bottom-0 讓它在 modal 捲動區內永遠釘在底部，不必捲到底去找。
+              */}
+              <div className="sticky bottom-0 -mx-6 -mb-6 px-6 pt-3 pb-[var(--action-bar-pad)] bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-800 rounded-b-2xl">
+                <button onClick={() => saveLog('manual')} className="w-full bg-teal-600 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-base hover:bg-teal-500 active:scale-[0.98] transition-all"><Icons.Check /> 加入紀錄</button>
+              </div>
             </div>
           )}
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Icons } from '../Icons';
 import { WaterCup } from '../ui/WaterCup';
 import { CONFIG } from '../../lib/config';
+import { NUTRIENTS, type NutrientStyle } from '../../lib/nutrientTheme';
 
 interface DashboardCardProps {
   remaining: number;
@@ -67,7 +68,7 @@ const CircularProgress: React.FC<{ remaining: number; total: number }> = ({ rema
         <div className={`text-2xl font-extrabold ${remaining < 0 ? 'text-red-500' : 'text-white'}`}>
           {remaining}
         </div>
-        <div className="text-[10px] text-neutral-500 font-bold">KCAL</div>
+        <div className="text-[10px] text-neutral-400 font-bold">KCAL</div>
       </div>
     </div>
   );
@@ -75,21 +76,19 @@ const CircularProgress: React.FC<{ remaining: number; total: number }> = ({ rema
 
 // 營養素進度條。四個營養素共用同一個元件，避免各自複製貼上後樣式走鐘。
 const MacroBar: React.FC<{
-  label: string;
+  nutrient: NutrientStyle;
   current: number;
   target: number;
-  textClass: string;
-  barClass: string;
-}> = ({ label, current, target, textClass, barClass }) => {
+}> = ({ nutrient, current, target }) => {
   const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
-        <span className="text-neutral-400 font-medium">{label}</span>
-        <span className={`${textClass} font-bold`}>{current} / {target}g</span>
+        <span className="text-neutral-400 font-medium">{nutrient.label}</span>
+        <span className={`${nutrient.barText} font-bold`}>{current} / {target}g</span>
       </div>
       <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
-        <div className={`h-full ${barClass} transition-all duration-500 ease-out`} style={{ width: `${pct}%` }}></div>
+        <div className={`h-full ${nutrient.bar} transition-all duration-500 ease-out`} style={{ width: `${pct}%` }}></div>
       </div>
     </div>
   );
@@ -123,7 +122,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
         </div>
         {/* 右側：每日目標 */}
         <div className="text-right flex flex-col items-end">
-          <div className="text-xs text-neutral-500">每日可消耗</div>
+          <div className="text-xs text-neutral-400">每日可消耗</div>
           <button onClick={() => openTargetModal('daily')} className="text-sm font-bold text-teal-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 mt-1 border border-neutral-700">
             {dailyTarget} <Icons.Edit className="w-3 h-3" />
           </button>
@@ -148,10 +147,10 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
         />
       </div>
       <div className="mt-5 space-y-2.5">
-        <MacroBar label="蛋白質攝取" current={dailyFood.pro} target={CONFIG.PRO_TARGET} textClass="text-blue-300" barClass="bg-blue-500" />
-        <MacroBar label="碳水化合物攝取" current={dailyFood.carbs} target={CONFIG.CARB_TARGET} textClass="text-amber-300" barClass="bg-amber-500" />
-        <MacroBar label="脂肪攝取" current={dailyFood.fat} target={CONFIG.FAT_TARGET} textClass="text-green-300" barClass="bg-green-500" />
-        <MacroBar label="膳食纖維攝取" current={dailyFood.fib} target={CONFIG.FIBER_TARGET} textClass="text-lime-300" barClass="bg-lime-500" />
+        <MacroBar nutrient={NUTRIENTS.protein} current={dailyFood.pro} target={CONFIG.PRO_TARGET} />
+        <MacroBar nutrient={NUTRIENTS.carbs} current={dailyFood.carbs} target={CONFIG.CARB_TARGET} />
+        <MacroBar nutrient={NUTRIENTS.fat} current={dailyFood.fat} target={CONFIG.FAT_TARGET} />
+        <MacroBar nutrient={NUTRIENTS.fiber} current={dailyFood.fib} target={CONFIG.FIBER_TARGET} />
       </div>
     </div>
   );

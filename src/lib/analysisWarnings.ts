@@ -1,5 +1,21 @@
 import type { AnalyzedActivity, AnalyzedFood, AnalyzedWater } from '../types';
 
+/**
+ * 正規化 AI 回傳的 confidence。
+ *
+ * Gemini 不保證遵守大小寫，可能回 "High" / "HIGH" / "high confidence" / 亂填。
+ * 若直接用 `!== 'high'` 判斷，一個高把握的結果會被誤標成「把握度中等，建議微調」——
+ * 對醫療使用者是誤導資訊。無法辨識的值一律回 undefined（徽章隱藏），
+ * 寧可不顯示，也不要顯示錯的把握度。
+ */
+export const normalizeConfidence = (value: unknown): AnalyzedFood['confidence'] => {
+  const text = String(value ?? '').trim().toLowerCase();
+  if (text.startsWith('high')) return 'high';
+  if (text.startsWith('medium') || text.startsWith('mid')) return 'medium';
+  if (text.startsWith('low')) return 'low';
+  return undefined;
+};
+
 const macroCalories = (protein = 0, carbs = 0, fat = 0): number =>
   protein * 4 + carbs * 4 + fat * 9;
 

@@ -19,13 +19,33 @@ const prefersReducedMotion = (): boolean =>
  */
 export const scrollIntoViewSmart = (
   el: HTMLElement | null,
-  block: ScrollLogicalPosition = 'start'
+  block: ScrollLogicalPosition = 'start',
+  /**
+   * 額外延遲。用在等待 iOS 鍵盤彈出動畫（約 250-300ms）完成後再捲動，
+   * 否則會捲到鍵盤還沒改變 viewport 之前的錯誤位置。
+   */
+  delayMs = 0
 ): void => {
   if (!el) return;
   const behavior: ScrollBehavior = prefersReducedMotion() ? 'auto' : 'smooth';
-  requestAnimationFrame(() => {
+  const run = () => {
     requestAnimationFrame(() => {
-      el.scrollIntoView({ behavior, block });
+      requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior, block });
+      });
     });
-  });
+  };
+  if (delayMs > 0) setTimeout(run, delayMs);
+  else run();
+};
+
+/**
+ * 輸入框取得焦點時把自己捲進可視範圍。
+ * iOS 原生也會捲，但不知道我們有 sticky footer，常把輸入框推到 footer 底下。
+ */
+export const scrollFieldIntoView = (
+  event: { currentTarget: HTMLElement }
+): void => {
+  const el = event.currentTarget; // 必須同步取，事件結束後 currentTarget 會被清空
+  scrollIntoViewSmart(el, 'center', 300);
 };

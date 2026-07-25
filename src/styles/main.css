@@ -17,6 +17,21 @@
  */
 :root {
   --sticky-offset: calc(111px + env(safe-area-inset-top));
+
+  /*
+   * sticky 行動按鈕列的底部留白。
+   * PWA（加到主畫面）模式：safe-area-inset-bottom 就是 home indicator 高度，夠用。
+   * Safari 一般分頁：底部網址列/工具列會overlay在 layout viewport 上，
+   * 只留 safe-area 的話「確認加入」會被工具列蓋住半截 —— 正是我們要解決的痛點。
+   * 因此分頁模式多留一段，寧可多一點空白也不要按鈕被蓋住。
+   */
+  --action-bar-pad: calc(env(safe-area-inset-bottom) + 1.25rem);
+}
+
+@media (display-mode: browser) {
+  :root {
+    --action-bar-pad: calc(env(safe-area-inset-bottom) + 2.75rem);
+  }
 }
 
 .scroll-anchor {
@@ -65,14 +80,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* Animations */
+/*
+ * 只用 opacity，刻意不用 transform: scale()。
+ * 有 transform 的元素會成為子孫 position:sticky 的 containing block，
+ * 導致 AnalysisResult 的 sticky 按鈕列在動畫的 0.3 秒內被釘在卡片底部（畫面外），
+ * 動畫結束後才「跳」回視窗底部。拿掉 scale 就沒有這個閃跳。
+ */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: scale(0.98);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
