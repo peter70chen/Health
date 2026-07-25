@@ -85,7 +85,8 @@ export const getDataHealthIssues = ({
     (log.calories || 0) > 3000 ||
     (log.protein || 0) > 200 ||
     (log.carbs || 0) > 400 ||
-    (log.fat || 0) > 200
+    (log.fat || 0) > 200 ||
+    (log.fiber || 0) > 100
   ).length;
   if (suspiciousFood > 0) {
     issues.push({

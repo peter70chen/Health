@@ -63,8 +63,9 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                       )}
                       <span>+{l.calories} kcal</span>
                       <span className="text-blue-400">P:{l.protein || 0}g</span>
-                      <span className="text-yellow-500">C:{l.carbs || 0}g</span>
-                      <span className="text-green-500">F:{l.fat || 0}g</span>
+                      <span className="text-amber-400">C:{l.carbs || 0}g</span>
+                      <span className="text-green-400">F:{l.fat || 0}g</span>
+                      <span className="text-lime-400">纖:{l.fiber || 0}g</span>
                     </div>
                   </div>
                 </div>

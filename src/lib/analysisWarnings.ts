@@ -9,6 +9,7 @@ export const getFoodWarnings = (food: AnalyzedFood): string[] => {
   const protein = food.protein || 0;
   const carbs = food.carbs || 0;
   const fat = food.fat || 0;
+  const fiber = food.fiber || 0;
   const estimatedMacroCalories = macroCalories(protein, carbs, fat);
 
   if (!food.foodName?.trim()) warnings.push('食物名稱缺漏：AI 沒有明確辨識出食物名稱。');
@@ -18,6 +19,8 @@ export const getFoodWarnings = (food: AnalyzedFood): string[] => {
   if (protein > 120) warnings.push('蛋白質偏高：單筆蛋白質超過 120g，可能被 AI 高估。');
   if (carbs > 250) warnings.push('碳水偏高：單筆碳水超過 250g，請確認份量。');
   if (fat > 120) warnings.push('脂肪偏高：單筆脂肪超過 120g，請確認是否合理。');
+  if (fiber > 40) warnings.push('纖維偏高：單筆膳食纖維超過 40g，AI 容易高估纖維，請確認。');
+  if (fiber > 0 && fiber > carbs) warnings.push('纖維大於碳水：膳食纖維本身計入碳水，數值不合理，建議調低纖維。');
   if (calories > 0 && estimatedMacroCalories > 0) {
     const diffRatio = Math.abs(estimatedMacroCalories - calories) / calories;
     if (diffRatio > 0.45) {

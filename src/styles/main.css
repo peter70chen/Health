@@ -9,6 +9,21 @@
   box-sizing: border-box;
 }
 
+/*
+ * Sticky chrome 高度：header (55px) + tab bar (56px) + 瀏海安全區。
+ * 55px 這個數字已被 App.tsx 的 tab bar `top-[calc(55px+...)]` 使用，兩者一致。
+ * 任何用 scrollIntoView 捲過去的目標都該掛 .scroll-anchor，
+ * 否則會被上方這兩層 sticky 蓋住。
+ */
+:root {
+  --sticky-offset: calc(111px + env(safe-area-inset-top));
+}
+
+.scroll-anchor {
+  scroll-margin-top: var(--sticky-offset);
+  scroll-margin-bottom: 1.5rem;
+}
+
 body {
   font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #000000;

@@ -17,6 +17,13 @@ export const CONFIG = {
     PRO_TARGET: 90,       // Protein target in grams
     CARB_TARGET: 150,     // Carbs target in grams
     FAT_TARGET: 60,       // Fat target in grams
+
+    // 膳食纖維目標 25g/day。
+    // 依據 IOM/DGA 的「每 1000 kcal 攝取 14g 纖維」：1700 kcal × 14 ≈ 24g。
+    // 男性一般建議的 30-38g 是以 2000-2500 kcal 計算，在熱量赤字下不適用。
+    // 且 GLP-1 (猛健樂) 使用者常有噁心、脹氣、便秘等腸胃副作用，
+    // 纖維過量會加重不適，25g 是飽足感與腸胃耐受度的平衡點。
+    FIBER_TARGET: 25,     // Dietary fiber target in grams
 } as const;
 
 /**

@@ -6,7 +6,7 @@ import { CONFIG } from '../../lib/config';
 interface DashboardCardProps {
   remaining: number;
   dailyTarget: number;
-  dailyFood: { cal: number; pro: number; carbs: number; fat: number };
+  dailyFood: { cal: number; pro: number; carbs: number; fat: number; fib: number };
   dailyAct: { cal: number };
   dailyRes: { cal: number };
   dailyWater: number;
@@ -73,6 +73,28 @@ const CircularProgress: React.FC<{ remaining: number; total: number }> = ({ rema
   );
 };
 
+// 營養素進度條。四個營養素共用同一個元件，避免各自複製貼上後樣式走鐘。
+const MacroBar: React.FC<{
+  label: string;
+  current: number;
+  target: number;
+  textClass: string;
+  barClass: string;
+}> = ({ label, current, target, textClass, barClass }) => {
+  const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span className="text-neutral-400 font-medium">{label}</span>
+        <span className={`${textClass} font-bold`}>{current} / {target}g</span>
+      </div>
+      <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
+        <div className={`h-full ${barClass} transition-all duration-500 ease-out`} style={{ width: `${pct}%` }}></div>
+      </div>
+    </div>
+  );
+};
+
 export const DashboardCard: React.FC<DashboardCardProps> = ({
   remaining,
   dailyTarget,
@@ -125,34 +147,11 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
           onLongPress={onQuickAddWater}
         />
       </div>
-      <div className="mt-5 space-y-3">
-        <div>
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-neutral-400 font-medium">蛋白質攝取</span>
-            <span className="text-blue-300 font-bold">{dailyFood.pro} / {CONFIG.PRO_TARGET}g</span>
-          </div>
-          <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500" style={{ width: `${Math.min((dailyFood.pro / CONFIG.PRO_TARGET) * 100, 100)}%` }}></div>
-          </div>
-        </div>
-        <div>
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-neutral-400 font-medium">碳水化合物攝取</span>
-            <span className="text-yellow-300 font-bold">{dailyFood.carbs} / {CONFIG.CARB_TARGET}g</span>
-          </div>
-          <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
-            <div className="h-full bg-yellow-500" style={{ width: `${Math.min((dailyFood.carbs / CONFIG.CARB_TARGET) * 100, 100)}%` }}></div>
-          </div>
-        </div>
-        <div>
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-neutral-400 font-medium">脂肪攝取</span>
-            <span className="text-green-300 font-bold">{dailyFood.fat} / {CONFIG.FAT_TARGET}g</span>
-          </div>
-          <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
-            <div className="h-full bg-green-500" style={{ width: `${Math.min((dailyFood.fat / CONFIG.FAT_TARGET) * 100, 100)}%` }}></div>
-          </div>
-        </div>
+      <div className="mt-5 space-y-2.5">
+        <MacroBar label="蛋白質攝取" current={dailyFood.pro} target={CONFIG.PRO_TARGET} textClass="text-blue-300" barClass="bg-blue-500" />
+        <MacroBar label="碳水化合物攝取" current={dailyFood.carbs} target={CONFIG.CARB_TARGET} textClass="text-amber-300" barClass="bg-amber-500" />
+        <MacroBar label="脂肪攝取" current={dailyFood.fat} target={CONFIG.FAT_TARGET} textClass="text-green-300" barClass="bg-green-500" />
+        <MacroBar label="膳食纖維攝取" current={dailyFood.fib} target={CONFIG.FIBER_TARGET} textClass="text-lime-300" barClass="bg-lime-500" />
       </div>
     </div>
   );
