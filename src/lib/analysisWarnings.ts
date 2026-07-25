@@ -10,9 +10,12 @@ import type { AnalyzedActivity, AnalyzedFood, AnalyzedWater } from '../types';
  */
 export const normalizeConfidence = (value: unknown): AnalyzedFood['confidence'] => {
   const text = String(value ?? '').trim().toLowerCase();
-  if (text.startsWith('high')) return 'high';
-  if (text.startsWith('medium') || text.startsWith('mid')) return 'medium';
-  if (text.startsWith('low')) return 'low';
+  // 用詞界比對而非 startsWith：startsWith('high') 會把 "highly uncertain"
+  // 判成高把握（徽章直接不顯示），剛好把最需要提醒的情況吃掉。
+  // `\b` 讓 "high" / "high confidence" 命中，"highly" 不命中。
+  if (/^high\b/.test(text)) return 'high';
+  if (/^(medium|mid|moderate)\b/.test(text)) return 'medium';
+  if (/^low\b/.test(text)) return 'low';
   return undefined;
 };
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MutableRefObject } from 'react';
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
 /**
  * 偵測使用者「最近是否正在手動捲動」。
@@ -57,5 +57,13 @@ export const useUserScrolling = (idleMs = 800): UserScrollGuard => {
     };
   }, [idleMs]);
 
-  return { isActive, suppress };
+  /*
+   * 必須回傳穩定的 identity。
+   *
+   * 曾經直接 `return { isActive, suppress }`，看起來人畜無害 —— 但 isActive/suppress
+   * 雖然穩定，外層物件每次 render 都是新的。呼叫端把它放進 useEffect 的依賴陣列後，
+   * 每一次 re-render 都會重跑 effect：在分析結果卡的欄位打一個字、或拖一下份量滑桿，
+   * 畫面就被捲回卡片頂端 —— 正好變成這個 hook 本來要防止的「跟使用者搶畫面」。
+   */
+  return useMemo<UserScrollGuard>(() => ({ isActive, suppress }), [isActive, suppress]);
 };

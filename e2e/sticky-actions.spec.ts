@@ -79,6 +79,47 @@ test('捲到卡片中段時，按鈕仍釘在視窗底部', async ({ page }) => 
   await page.screenshot({ path: 'verification-results/r2-sticky-after-scroll.png' });
 });
 
+/**
+ * 迴歸測試：R2 曾經因為 useUserScrolling 回傳不穩定的物件 identity，
+ * 讓自動捲動的 effect 每次 re-render 都重跑 —— 在結果卡打字或拖滑桿時
+ * 畫面會被反覆拉回卡片頂端。這個測試就是為了永遠擋住那個行為。
+ */
+test('在結果卡編輯欄位或拖份量時，畫面不會被拉回卡片頂端', async ({ page }) => {
+  await page.setViewportSize(IPHONE_SE);
+  await seedStorage(page);
+  await page.goto(BASE_URL);
+
+  await page.getByRole('button', { name: '記錄飲食' }).click();
+  await page.getByRole('button', { name: '常用', exact: true }).click();
+  await page.getByText('排骨便當').click();
+  await expect(page.getByRole('button', { name: /確認加入/ })).toBeVisible();
+
+  // 等首次自動捲動完成（會停在卡片頂端對齊 sticky header 的位置）。
+  await page.waitForTimeout(1200);
+
+  // 模擬真實情境：使用者往下捲一點，去修改卡片下半部的「膳食纖維」欄位。
+  // 此時卡片頂端已經在畫面外 —— 這是能觀察到「被拉回頂端」的必要前提。
+  //
+  // 註：不要用「捲到很遠再打字」的寫法。真人沒辦法對著看不到的欄位打字，
+  // Playwright 也會為了點擊而先把欄位捲進畫面，量到的會是測試框架的捲動而非 App 的。
+  await page.evaluate(() => window.scrollTo(0, 1000));
+  await page.waitForTimeout(1000);
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+
+  const fiberInput = page.locator('label', { hasText: '膳食纖維 g' }).locator('input');
+  await expect(fiberInput).toBeInViewport();
+
+  // 打字會 setAnalyzedFood({...}) 產生新物件。若捲動 effect 依賴那個物件，
+  // 每一個字都會把畫面拉回卡片頂端，正在編輯的欄位就被推出畫面。
+  await fiberInput.pressSequentially('12', { delay: 60 });
+  await page.waitForTimeout(1800);
+
+  const scrollAfter = await page.evaluate(() => window.scrollY);
+  expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThan(120);
+  // 編輯中的欄位必須仍然看得見
+  await expect(fiberInput).toBeInViewport();
+});
+
 test('儀表板顯示四條營養素進度條，舊資料的纖維算作 0 不會是 NaN', async ({ page }) => {
   await page.setViewportSize(IPHONE_SE);
   await seedStorage(page);

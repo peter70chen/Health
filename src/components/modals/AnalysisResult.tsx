@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icons } from '../Icons';
+import { NUTRIENTS } from '../../lib/nutrientTheme';
 import type { AnalyzedFood, AnalyzedActivity, AnalyzedWater } from '../../types';
 
 interface AnalysisResultProps {
@@ -54,11 +55,11 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           )}
           {analyzedFood ? (
             <div className="flex flex-col gap-1">
-              <span className="text-orange-400 text-sm font-bold">原始熱量: {analyzedFood.calories} kcal</span>
-              <span className="text-blue-400 text-sm font-bold">原始蛋白: {analyzedFood.protein || 0}g</span>
-              <span className="text-amber-400 text-sm font-bold">原始碳水: {analyzedFood.carbs || 0}g</span>
-              <span className="text-green-400 text-sm font-bold">原始脂肪: {analyzedFood.fat || 0}g</span>
-              <span className="text-lime-400 text-sm font-bold">原始纖維: {analyzedFood.fiber || 0}g</span>
+              <span className={`${NUTRIENTS.calories.text} text-sm font-bold`}>原始熱量: {analyzedFood.calories} kcal</span>
+              <span className={`${NUTRIENTS.protein.text} text-sm font-bold`}>原始蛋白: {analyzedFood.protein || 0}g</span>
+              <span className={`${NUTRIENTS.carbs.text} text-sm font-bold`}>原始碳水: {analyzedFood.carbs || 0}g</span>
+              <span className={`${NUTRIENTS.fat.text} text-sm font-bold`}>原始脂肪: {analyzedFood.fat || 0}g</span>
+              <span className={`${NUTRIENTS.fiber.text} text-sm font-bold`}>原始纖維: {analyzedFood.fiber || 0}g</span>
             </div>
           ) : (
             analyzedWater ? (
@@ -107,11 +108,11 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           </div>
           <input type="range" min="0.1" max="3" step="0.1" value={portion} onChange={e => setPortion(parseFloat(e.target.value))} className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-teal-500" />
           <div className="grid grid-cols-5 mt-3 pt-3 border-t border-neutral-700 text-center divide-x divide-neutral-700">
-            <div><div className="text-[11px] text-neutral-400">熱量</div><div className="text-base font-bold text-orange-500">{Math.round(analyzedFood.calories * portion)}</div></div>
-            <div><div className="text-[11px] text-neutral-400">蛋白</div><div className="text-base font-bold text-blue-400">{Math.round((analyzedFood.protein || 0) * portion)}</div></div>
-            <div><div className="text-[11px] text-neutral-400">碳水</div><div className="text-base font-bold text-amber-400">{Math.round((analyzedFood.carbs || 0) * portion)}</div></div>
-            <div><div className="text-[11px] text-neutral-400">脂肪</div><div className="text-base font-bold text-green-400">{Math.round((analyzedFood.fat || 0) * portion)}</div></div>
-            <div><div className="text-[11px] text-neutral-400">纖維</div><div className="text-base font-bold text-lime-400">{Math.round((analyzedFood.fiber || 0) * portion)}</div></div>
+            <div><div className="text-[11px] text-neutral-400">熱量</div><div className={`text-base font-bold ${NUTRIENTS.calories.text}`}>{Math.round(analyzedFood.calories * portion)}</div></div>
+            <div><div className="text-[11px] text-neutral-400">蛋白</div><div className={`text-base font-bold ${NUTRIENTS.protein.text}`}>{Math.round((analyzedFood.protein || 0) * portion)}</div></div>
+            <div><div className="text-[11px] text-neutral-400">碳水</div><div className={`text-base font-bold ${NUTRIENTS.carbs.text}`}>{Math.round((analyzedFood.carbs || 0) * portion)}</div></div>
+            <div><div className="text-[11px] text-neutral-400">脂肪</div><div className={`text-base font-bold ${NUTRIENTS.fat.text}`}>{Math.round((analyzedFood.fat || 0) * portion)}</div></div>
+            <div><div className="text-[11px] text-neutral-400">纖維</div><div className={`text-base font-bold ${NUTRIENTS.fiber.text}`}>{Math.round((analyzedFood.fiber || 0) * portion)}</div></div>
           </div>
         </div>
       )}
@@ -150,11 +151,11 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           </div>
           {((analyzedWater.calories || 0) > 0) && (
             <div className="grid grid-cols-5 mt-3 pt-3 border-t border-neutral-700 text-center divide-x divide-neutral-700">
-              <div><div className="text-[11px] text-neutral-400">熱量</div><div className="text-base font-bold text-orange-500">{Math.round((analyzedWater.calories || 0) * portion)}</div></div>
-              <div><div className="text-[11px] text-neutral-400">蛋白</div><div className="text-base font-bold text-blue-400">{Math.round((analyzedWater.protein || 0) * portion)}</div></div>
-              <div><div className="text-[11px] text-neutral-400">碳水</div><div className="text-base font-bold text-amber-400">{Math.round((analyzedWater.carbs || 0) * portion)}</div></div>
-              <div><div className="text-[11px] text-neutral-400">脂肪</div><div className="text-base font-bold text-green-400">{Math.round((analyzedWater.fat || 0) * portion)}</div></div>
-              <div><div className="text-[11px] text-neutral-400">纖維</div><div className="text-base font-bold text-lime-400">{Math.round((analyzedWater.fiber || 0) * portion)}</div></div>
+              <div><div className="text-[11px] text-neutral-400">熱量</div><div className={`text-base font-bold ${NUTRIENTS.calories.text}`}>{Math.round((analyzedWater.calories || 0) * portion)}</div></div>
+              <div><div className="text-[11px] text-neutral-400">蛋白</div><div className={`text-base font-bold ${NUTRIENTS.protein.text}`}>{Math.round((analyzedWater.protein || 0) * portion)}</div></div>
+              <div><div className="text-[11px] text-neutral-400">碳水</div><div className={`text-base font-bold ${NUTRIENTS.carbs.text}`}>{Math.round((analyzedWater.carbs || 0) * portion)}</div></div>
+              <div><div className="text-[11px] text-neutral-400">脂肪</div><div className={`text-base font-bold ${NUTRIENTS.fat.text}`}>{Math.round((analyzedWater.fat || 0) * portion)}</div></div>
+              <div><div className="text-[11px] text-neutral-400">纖維</div><div className={`text-base font-bold ${NUTRIENTS.fiber.text}`}>{Math.round((analyzedWater.fiber || 0) * portion)}</div></div>
             </div>
           )}
         </div>

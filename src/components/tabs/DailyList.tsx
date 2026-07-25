@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Icons } from '../Icons';
+import { NUTRIENTS } from '../../lib/nutrientTheme';
 import type { FoodLog, ActivityLog, WaterLog, ConfirmModalState } from '../../types';
 
 interface DailyListProps {
@@ -62,10 +63,10 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                         <span className="text-blue-400 flex items-center gap-1"><Icons.Water className="w-3 h-3" /> {l.amount} ml</span>
                       )}
                       <span>+{l.calories} kcal</span>
-                      <span className="text-blue-400">P:{l.protein || 0}g</span>
-                      <span className="text-amber-400">C:{l.carbs || 0}g</span>
-                      <span className="text-green-400">F:{l.fat || 0}g</span>
-                      <span className="text-lime-400">纖:{l.fiber || 0}g</span>
+                      <span className={NUTRIENTS.protein.text}>{NUTRIENTS.protein.short}:{l.protein || 0}g</span>
+                      <span className={NUTRIENTS.carbs.text}>{NUTRIENTS.carbs.short}:{l.carbs || 0}g</span>
+                      <span className={NUTRIENTS.fat.text}>{NUTRIENTS.fat.short}:{l.fat || 0}g</span>
+                      <span className={NUTRIENTS.fiber.text}>{NUTRIENTS.fiber.short}:{l.fiber || 0}g</span>
                     </div>
                   </div>
                 </div>

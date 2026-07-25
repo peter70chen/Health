@@ -10,6 +10,7 @@ import { getActivityWarnings, getFoodWarnings, getWaterWarnings, normalizeConfid
 import { getDataHealthIssues } from './lib/dataHealth';
 import { PROMPTS } from './lib/prompts';
 import { CONFIG, STORAGE_KEYS } from './lib/config';
+import { NUTRIENTS } from './lib/nutrientTheme';
 import { removeTransientImagePreview } from './lib/dataSanitizers';
 import { downloadJsonFile } from './lib/download';
 import { buildTrainingExport } from './lib/trainingExport';
@@ -202,8 +203,15 @@ const App: React.FC = () => {
   //
   // 若結果剛好在使用者手滑（或 iOS 慣性捲動）期間落地，不硬搶畫面，
   // 而是等他停下來再補捲一次；最多等 5 秒就放棄，避免無限等待。
+  //
+  // 依賴必須是「有沒有結果卡」這個布林值，不能是 analyzedFood 物件本身。
+  // 編輯結果卡的任何欄位都會 setAnalyzedFood({...}) 產生新物件，
+  // 若把物件放進依賴陣列，打一個字就重跑一次 effect、把畫面拉回卡片 ——
+  // 實測從 scrollY 2000 打一個字會被拉回 767（見 e2e/sticky-actions.spec.ts 的迴歸測試）。
+  const hasAnalysisResult = Boolean(analyzedFood || analyzedActivity || analyzedWater);
+
   useEffect(() => {
-    if (!analyzedFood && !analyzedActivity && !analyzedWater) return;
+    if (!hasAnalysisResult) return;
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -221,7 +229,7 @@ const App: React.FC = () => {
 
     timer = setTimeout(attempt, 0);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [analyzedFood, analyzedActivity, analyzedWater, userScroll]);
+  }, [hasAnalysisResult, userScroll]);
 
   const openTargetModal = (type: 'daily' | 'activity') => {
     setTargetModal({ type, value: type === 'daily' ? dailyTarget : activityTarget });
@@ -1035,9 +1043,9 @@ const App: React.FC = () => {
       <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
         <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">{APP_DISPLAY_VERSION}</span></h1>
         <div className="flex gap-2">
-          <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
-          <button onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center hover:text-teal-400 ${dataHealthIssues.length > 0 ? 'text-amber-400' : 'text-neutral-500'}`}><Icons.ScanEye /><span className="text-[10px] font-bold">CHECK</span></button>
-          <button onClick={handleTrainingExport} className="flex flex-col items-center text-teal-400 hover:text-teal-300"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold">TRAIN</span></button>
+          <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
+          <button onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-400 ${dataHealthIssues.length > 0 ? 'text-amber-400' : 'text-neutral-500'}`}><Icons.ScanEye /><span className="text-[10px] font-bold">CHECK</span></button>
+          <button onClick={handleTrainingExport} className="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] text-teal-400 hover:text-teal-300"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold">TRAIN</span></button>
         </div>
       </div>
 
@@ -1121,11 +1129,11 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="grid grid-cols-5 text-center bg-neutral-950 border border-neutral-800 rounded-xl overflow-hidden mb-4">
-              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">熱量</div><div className="font-bold text-orange-400 text-sm">{Math.round(editingFoodBase.calories * editingFoodPortion.portion)}</div></div>
-              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">蛋白</div><div className="font-bold text-blue-400 text-sm">{Math.round(editingFoodBase.protein * editingFoodPortion.portion)}g</div></div>
-              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">碳水</div><div className="font-bold text-amber-400 text-sm">{Math.round(editingFoodBase.carbs * editingFoodPortion.portion)}g</div></div>
-              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">脂肪</div><div className="font-bold text-green-400 text-sm">{Math.round(editingFoodBase.fat * editingFoodPortion.portion)}g</div></div>
-              <div className="p-2.5"><div className="text-[11px] text-neutral-400">纖維</div><div className="font-bold text-lime-400 text-sm">{Math.round(editingFoodBase.fiber * editingFoodPortion.portion)}g</div></div>
+              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">熱量</div><div className={`font-bold text-sm ${NUTRIENTS.calories.text}`}>{Math.round(editingFoodBase.calories * editingFoodPortion.portion)}</div></div>
+              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">蛋白</div><div className={`font-bold text-sm ${NUTRIENTS.protein.text}`}>{Math.round(editingFoodBase.protein * editingFoodPortion.portion)}g</div></div>
+              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">碳水</div><div className={`font-bold text-sm ${NUTRIENTS.carbs.text}`}>{Math.round(editingFoodBase.carbs * editingFoodPortion.portion)}g</div></div>
+              <div className="p-2.5 border-r border-neutral-800"><div className="text-[11px] text-neutral-400">脂肪</div><div className={`font-bold text-sm ${NUTRIENTS.fat.text}`}>{Math.round(editingFoodBase.fat * editingFoodPortion.portion)}g</div></div>
+              <div className="p-2.5"><div className="text-[11px] text-neutral-400">纖維</div><div className={`font-bold text-sm ${NUTRIENTS.fiber.text}`}>{Math.round(editingFoodBase.fiber * editingFoodPortion.portion)}g</div></div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setEditingFoodPortion(null)} className="flex-1 py-4 border border-neutral-700 rounded-xl font-bold text-neutral-400 hover:bg-neutral-800">取消</button>

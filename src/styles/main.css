@@ -28,7 +28,15 @@
   --action-bar-pad: calc(env(safe-area-inset-bottom) + 1.25rem);
 }
 
-@media (display-mode: browser) {
+/*
+ * 限縮在「觸控裝置的瀏覽器分頁模式」才加大留白：
+ * 桌機用瀏覽器分頁看沒有底部工具列遮擋問題，不該平白多吃 44px 空白。
+ *
+ * ⚠️ 這是根據 iOS Safari 工具列高度推估的經驗值緩解，**尚未在真 iPhone 上驗證**。
+ * Playwright 跑的是 Chromium desktop，量不到 iOS 工具列，所以那組 e2e 測試
+ * 並不能證明這一項有效。真機實測前請勿宣稱此項已解決。
+ */
+@media (display-mode: browser) and (pointer: coarse) {
   :root {
     --action-bar-pad: calc(env(safe-area-inset-bottom) + 2.75rem);
   }

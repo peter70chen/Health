@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Icons } from '../Icons';
 import { SortableItem } from '../ui/SortableItem';
 import { scrollFieldIntoView } from '../../lib/scroll';
+import { NUTRIENTS } from '../../lib/nutrientTheme';
 import {
   DndContext,
   DragOverlay,
@@ -186,11 +187,11 @@ export const InputModal: React.FC<InputModalProps> = ({
         <div onClick={() => selectFavorite(fav)} className="flex-1 cursor-pointer">
           <div className="font-bold text-neutral-200">{fav.foodName}</div>
           <div className="text-xs text-neutral-400 mt-1 flex flex-wrap gap-x-2">
-            <span className="text-orange-400">{fav.calories} kcal</span>
-            <span className="text-blue-400">P:{fav.protein || 0}</span>
-            <span className="text-amber-400">C:{fav.carbs || 0}</span>
-            <span className="text-green-400">F:{fav.fat || 0}</span>
-            <span className="text-lime-400">纖:{fav.fiber || 0}</span>
+            <span className={NUTRIENTS.calories.text}>{fav.calories} kcal</span>
+            <span className={NUTRIENTS.protein.text}>{NUTRIENTS.protein.short}:{fav.protein || 0}</span>
+            <span className={NUTRIENTS.carbs.text}>{NUTRIENTS.carbs.short}:{fav.carbs || 0}</span>
+            <span className={NUTRIENTS.fat.text}>{NUTRIENTS.fat.short}:{fav.fat || 0}</span>
+            <span className={NUTRIENTS.fiber.text}>{NUTRIENTS.fiber.short}:{fav.fiber || 0}</span>
           </div>
         </div>
       </div>
@@ -208,7 +209,7 @@ export const InputModal: React.FC<InputModalProps> = ({
           <div className="font-bold text-neutral-200">{fav.beverageName}</div>
           <div className="text-xs text-neutral-400 mt-1 flex gap-2">
             <span className="text-blue-400">{fav.amount} ml</span>
-            {(fav.calories || 0) > 0 && <span className="text-orange-400">{fav.calories} kcal</span>}
+            {(fav.calories || 0) > 0 && <span className={NUTRIENTS.calories.text}>{fav.calories} kcal</span>}
           </div>
         </div>
       </div>
