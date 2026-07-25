@@ -951,10 +951,13 @@ const App: React.FC = () => {
       const disp = `${d.getMonth() + 1}/${d.getDate()}`;
       const f = foodLogs.filter(l => l.date === ds).reduce((s, item) => s + (item.calories || 0), 0);
       const a = activityLogs.filter(l => l.date === ds).reduce((s, item) => s + (item.activeCalories || 0), 0);
-      arr.push({ date: ds, disp: disp, in: f, out: a });
+      // 阻力訓練也要算進消耗：儀表板 OUT、歷史查詢、過去記錄區都含阻力，
+      // 之前唯獨趨勢圖漏算，重訓日的消耗柱會跟 dashboard 對不上。
+      const r = resistanceLogs.filter(l => l.date === ds).reduce((s, item) => s + (item.totalCalories || 0), 0);
+      arr.push({ date: ds, disp: disp, in: f, out: a + r });
     }
     return arr;
-  }, [foodLogs, activityLogs, trendRange]);
+  }, [foodLogs, activityLogs, resistanceLogs, trendRange]);
 
   const weightData = useMemo((): ChartData[] => {
     const points: ChartData[] = [];
