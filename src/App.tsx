@@ -27,7 +27,7 @@ import type {
   AnalyzedFood, AnalyzedActivity, AnalyzedWater,
   FavoriteFood, FavoriteWaterContainer, ManualFormState,
   ConfirmModalState, TargetModalState, RangeQueryResults,
-  ResistanceDef, ResistanceLog, ResistanceItem
+  ResistanceDef, ResistanceLog, ResistanceItem, SaveLogType
 } from './types';
 
 type FavoriteSelectable = FavoriteFood | FavoriteWaterContainer;
@@ -524,7 +524,7 @@ const App: React.FC = () => {
     return num;
   };
 
-  const saveLog = (type: string) => {
+  const saveLog = (type: SaveLogType) => {
     const now = Date.now();
     const logDate = currentViewDate || getLocalISOString();
 

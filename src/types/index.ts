@@ -200,6 +200,9 @@ export type DailyListItem = (FoodLog | ActivityLog | WaterLog) & {
     _source: 'food' | 'activity' | 'water';
 };
 
+// saveLog 的合法入口：'manual' 走手動表單，其餘走 AI 分析結果
+export type SaveLogType = 'manual' | 'food' | 'activity' | 'water';
+
 // Resistance Definition
 export interface ResistanceDef {
     id: number;

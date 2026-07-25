@@ -24,7 +24,7 @@ import {
 } from '@dnd-kit/sortable';
 import type {
   FavoriteFood, FavoriteWaterContainer, ManualFormState,
-  ResistanceDef, ResistanceItem, ResistanceLog
+  ResistanceDef, ResistanceItem, ResistanceLog, SaveLogType
 } from '../../types';
 
 interface InputModalProps {
@@ -53,7 +53,7 @@ interface InputModalProps {
   setManualForm: React.Dispatch<React.SetStateAction<ManualFormState>>;
   addToFavorites: boolean;
   setAddToFavorites: (add: boolean) => void;
-  saveLog: (type: string) => void;
+  saveLog: (type: SaveLogType) => void;
 
   // Favorites
   favoriteFoods: FavoriteFood[];
