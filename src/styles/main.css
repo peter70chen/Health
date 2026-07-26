@@ -52,6 +52,16 @@
   scroll-margin-bottom: 1.5rem;
 }
 
+.status-toast {
+  /*
+   * iPhone PWA 的 viewport 會延伸到狀態列下方。通知必須從安全區底部開始，
+   * 否則成功與錯誤訊息會被瀏海或靈動島遮住。
+   */
+  top: max(1rem, calc(env(safe-area-inset-top, 0px) + 0.75rem));
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+}
+
 body {
   font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #000000;

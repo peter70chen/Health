@@ -5,7 +5,13 @@ import { WeightChart } from './components/charts/WeightChart';
 import { InputModal, SettingsPanel, ConfirmModal, TargetModal, AnalysisResult, DataHealthPanel } from './components/modals';
 import { QuickWaterModal } from './components/modals/QuickWaterModal';
 import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, WeightForm, WeightList, WeightHistory } from './components/tabs';
-import { callGeminiStructured, FOOD_MODELS, FOOD_REVIEW_MODEL } from './services/gemini';
+import {
+  callGeminiStructured,
+  FOOD_MODELS,
+  FOOD_REVIEW_MODEL,
+  normalizeGeminiApiKey,
+  validateGeminiApiKey
+} from './services/gemini';
 import type { GeminiImage } from './services/gemini';
 import { getActivityWarnings, getFoodWarnings, getWaterWarnings, normalizeConfidence } from './lib/analysisWarnings';
 import { FOOD_ANALYSIS_JSON_SCHEMA, parseFoodAnalysis } from './lib/foodAnalysis';
@@ -49,6 +55,8 @@ type EditingFoodPortionState = {
   portion: number;
 } | null;
 
+type ApiKeyStatus = 'unverified' | 'validating' | 'valid' | 'invalid';
+
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '未知錯誤';
 
@@ -69,6 +77,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'daily' | 'weight'>('daily');
   const [loading, setLoading] = useState(true);
   const [apiKeys, setApiKeys] = useState<ApiKeys>({ free1: '', free2: '', free3: '', free4: '', free5: '', paid: '' });
+  const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatus>('unverified');
   const [showSettings, setShowSettings] = useState(false);
   const [showDataHealth, setShowDataHealth] = useState(false);
   const [trendRange, setTrendRange] = useState(7);
@@ -143,7 +152,11 @@ const App: React.FC = () => {
   const analysisResultRef = useRef<HTMLDivElement>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  useAutoClearStatus(statusMessage, setStatusMessage, 3000);
+  useAutoClearStatus(
+    statusMessage,
+    setStatusMessage,
+    statusMessage?.type === 'error' ? 6000 : 3500
+  );
 
   /*
    * 播報用 nonce。螢幕閱讀器靠 live region 的「內容變化」觸發播報，
@@ -176,6 +189,29 @@ const App: React.FC = () => {
     setApiKeys,
     setLoading
   });
+
+  useEffect(() => {
+    if (loading || apiKeys.paid) return;
+    const legacyKey = [
+      apiKeys.free1,
+      apiKeys.free2,
+      apiKeys.free3,
+      apiKeys.free4,
+      apiKeys.free5
+    ].find(key => normalizeGeminiApiKey(key));
+    if (!legacyKey) return;
+
+    setApiKeys(previous => ({
+      ...previous,
+      free1: '',
+      free2: '',
+      free3: '',
+      free4: '',
+      free5: '',
+      paid: normalizeGeminiApiKey(legacyKey)
+    }));
+    setApiKeyStatus('unverified');
+  }, [apiKeys, loading]);
 
   usePersistToStorage({
     loading,
@@ -220,10 +256,45 @@ const App: React.FC = () => {
 
   useEffect(() => { if (weightHistoryDate) setShowWeightHistory(true); }, [weightHistoryDate]);
 
-  const saveSettings = () => {
-    localStorage.setItem(STORAGE_KEYS.API_KEYS, JSON.stringify(apiKeys));
-    // setShowSettings(false); // Keep settings open
-    setStatusMessage({ type: 'success', text: "設定已儲存！" });
+  const handleApiKeyChange = (value: string) => {
+    setApiKeys(previous => ({
+      ...previous,
+      free1: '',
+      free2: '',
+      free3: '',
+      free4: '',
+      free5: '',
+      paid: value
+    }));
+    setApiKeyStatus('unverified');
+  };
+
+  const saveSettings = async () => {
+    const normalizedApiKeys = Object.fromEntries(
+      Object.entries(apiKeys).map(([key, value]) => [key, normalizeGeminiApiKey(value)])
+    ) as unknown as ApiKeys;
+    setApiKeys(normalizedApiKeys);
+
+    if (!normalizedApiKeys.paid) {
+      localStorage.setItem(STORAGE_KEYS.API_KEYS, JSON.stringify(normalizedApiKeys));
+      setApiKeyStatus('unverified');
+      setStatusMessage({ type: 'success', text: '一般設定已儲存；尚未設定 Gemini API Key' });
+      return;
+    }
+
+    setApiKeyStatus('validating');
+    try {
+      const availableModel = await validateGeminiApiKey(normalizedApiKeys.paid);
+      localStorage.setItem(STORAGE_KEYS.API_KEYS, JSON.stringify(normalizedApiKeys));
+      setApiKeyStatus('valid');
+      setStatusMessage({
+        type: 'success',
+        text: `設定已儲存，Key 可正常使用（${availableModel.replace('gemini-', 'Gemini ')}）`
+      });
+    } catch (error) {
+      setApiKeyStatus('invalid');
+      setStatusMessage({ type: 'error', text: `Key 無法使用：${getErrorMessage(error)}` });
+    }
   };
 
   // AI 分析完成後，把結果卡頂端帶到 sticky header 正下方。
@@ -1246,7 +1317,7 @@ const App: React.FC = () => {
 
       {/* Status Message Overlay：純視覺呈現，播報交給上面的 live region，避免唸兩次 */}
       {statusMessage && (
-        <div aria-hidden="true" className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-lg text-white text-sm font-bold flex items-center gap-2 animate-fadeIn ${statusMessage.type === 'success' ? 'bg-teal-600' : 'bg-red-600'}`}>
+        <div aria-hidden="true" className={`status-toast fixed left-1/2 transform -translate-x-1/2 z-[100] px-5 py-3 rounded-lg shadow-lg text-white text-sm font-bold flex items-center gap-2 animate-fadeIn ${statusMessage.type === 'success' ? 'bg-teal-600' : 'bg-red-600'}`}>
           {statusMessage.type === 'success' ? <Icons.Check className="w-4 h-4" /> : <Icons.AlertCircle className="w-4 h-4" />}
           {statusMessage.text}
         </div>
@@ -1279,7 +1350,8 @@ const App: React.FC = () => {
         waterTarget={waterTarget}
         setWaterTarget={setWaterTarget}
         apiKeys={apiKeys}
-        setApiKeys={setApiKeys}
+        apiKeyStatus={apiKeyStatus}
+        onApiKeyChange={handleApiKeyChange}
         saveSettings={saveSettings}
         backupToken={backupToken}
         saveBackupToken={saveBackupToken}

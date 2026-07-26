@@ -13,8 +13,9 @@ interface SettingsPanelProps {
   waterTarget: number;
   setWaterTarget: (target: number) => void;
   apiKeys: ApiKeys;
-  setApiKeys: React.Dispatch<React.SetStateAction<ApiKeys>>;
-  saveSettings: () => void;
+  apiKeyStatus: 'unverified' | 'validating' | 'valid' | 'invalid';
+  onApiKeyChange: (value: string) => void;
+  saveSettings: () => Promise<void>;
   backupToken: string;
   saveBackupToken: (token: string) => void;
   isBackingUp: boolean;
@@ -37,7 +38,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   waterTarget,
   setWaterTarget,
   apiKeys,
-  setApiKeys,
+  apiKeyStatus,
+  onApiKeyChange,
   saveSettings,
   backupToken,
   saveBackupToken,
@@ -52,12 +54,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   if (!showSettings) return null;
 
+  const keyBadge = (() => {
+    if (!hasAnyKey) return { text: 'Key 未設定', className: 'bg-red-900 text-red-300' };
+    if (apiKeyStatus === 'validating') return { text: 'Key 驗證中', className: 'bg-amber-900 text-amber-200' };
+    if (apiKeyStatus === 'valid') return { text: 'Key 可使用', className: 'bg-green-900 text-green-300' };
+    if (apiKeyStatus === 'invalid') return { text: 'Key 無法使用', className: 'bg-red-900 text-red-300' };
+    return { text: 'Key 待驗證', className: 'bg-neutral-700 text-neutral-300' };
+  })();
+
   return (
     <div className="bg-neutral-900 p-5 border-b border-neutral-800 animate-fadeIn">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-bold text-white">設定</h3>
-        <span className={`text-xs px-2 py-1 rounded-full ${hasAnyKey ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
-          {hasAnyKey ? 'Key 已設定' : 'Key 未設定'}
+        <span className={`text-xs px-2 py-1 rounded-full ${keyBadge.className}`}>
+          {keyBadge.text}
         </span>
       </div>
       <div className="space-y-4">
@@ -81,23 +91,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
         <div className="border-t border-neutral-700 pt-4">
           <label className="block text-sm font-bold text-neutral-400 mb-2">
-            Google Gemini API Keys
+            Google Gemini API Key
             <span className="block text-[10px] font-normal text-neutral-500 mt-1">
-              食物照片：Gemini 3.6 Flash（3.5 Flash 備援），固定使用 Paid Key
-            </span>
-            <span className="block text-[10px] font-normal text-neutral-500 mt-1">
-              下方 Free Keys 僅保留給非個人資料測試；App 內的健康分析一律使用 Paid Key
+              食物照片使用 Gemini 3.6 Flash（3.5 Flash 備援）；Key 所屬專案需啟用計費
             </span>
           </label>
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="mb-2">
-              <input type="password" value={apiKeys[`free${i}`]} onChange={e => setApiKeys(p => ({ ...p, [`free${i}`]: e.target.value }))} placeholder={`Free Key ${i}`} className="w-full p-2 border rounded-lg text-xs bg-neutral-800 border-neutral-700 focus:border-neutral-500 outline-none text-neutral-300" />
-            </div>
-          ))}
           <div className="mt-2">
-            <input type="password" value={apiKeys.paid} onChange={e => setApiKeys(p => ({ ...p, paid: e.target.value }))} placeholder="Paid Key（食物照片與健康備註）" className="w-full p-2 border rounded-lg text-xs bg-neutral-800 border-orange-900/50 focus:border-orange-500 outline-none text-orange-200" />
+            <input type="password" value={apiKeys.paid} onChange={e => onApiKeyChange(e.target.value)} placeholder="Gemini API Key" className="w-full p-3 border rounded-lg text-xs bg-neutral-800 border-orange-900/50 focus:border-orange-500 outline-none text-orange-200" />
             <p className="mt-1 text-[10px] leading-relaxed text-neutral-500">
-              食物照片與健康備註不會使用免費層。照片只在分析當下送出，不會存進每日紀錄或備份。
+              App 只需要這一組 Key。照片只在分析當下送出，不會存進每日紀錄或備份。
             </p>
           </div>
         </div>
@@ -169,8 +171,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </p>
         </div>
       </div>
-      <button onClick={saveSettings} className="bg-teal-600 text-white px-4 py-4 rounded-xl text-sm w-full font-bold flex justify-center items-center gap-2 mt-6 hover:bg-teal-500 transition-colors">
-        <Icons.Save /> 儲存設定
+      <button
+        onClick={() => void saveSettings()}
+        disabled={apiKeyStatus === 'validating'}
+        className="bg-teal-600 disabled:bg-neutral-700 disabled:text-neutral-400 text-white px-4 py-4 rounded-xl text-sm w-full font-bold flex justify-center items-center gap-2 mt-6 hover:bg-teal-500 disabled:hover:bg-neutral-700 transition-colors"
+      >
+        <Icons.Save /> {apiKeyStatus === 'validating' ? '正在驗證 Key...' : '儲存並驗證設定'}
       </button>
     </div>
   );

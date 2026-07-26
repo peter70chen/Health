@@ -45,6 +45,83 @@ const GENERAL_FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'g
 export const FOOD_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash'] as const;
 export const FOOD_REVIEW_MODEL = 'gemini-3.1-pro-preview';
 
+class GeminiRequestError extends Error {
+    constructor(
+        message: string,
+        readonly status: number,
+        readonly rawMessage: string
+    ) {
+        super(message);
+        this.name = 'GeminiRequestError';
+    }
+}
+
+export const normalizeGeminiApiKey = (key: string): string => {
+    const trimmed = key.trim();
+    const hasMatchingQuotes = (
+        (trimmed.startsWith('"') && trimmed.endsWith('"'))
+        || (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    );
+    return hasMatchingQuotes ? trimmed.slice(1, -1).trim() : trimmed;
+};
+
+const createGeminiRequestError = (message: string, status: number): GeminiRequestError => {
+    const normalized = message.toLowerCase();
+
+    if (
+        normalized.includes('api key not valid')
+        || normalized.includes('invalid api key')
+        || normalized.includes('unregistered callers')
+    ) {
+        return new GeminiRequestError(
+            '這個 Gemini API Key 無效，請確認已完整貼上，且沒有多餘空白。',
+            status,
+            message
+        );
+    }
+    if (
+        normalized.includes('referer')
+        || normalized.includes('referrer')
+        || normalized.includes('api_key_service_blocked')
+    ) {
+        return new GeminiRequestError(
+            '這個 Key 的網站限制不允許 Health App 使用。請在 Google Cloud 將 peter-health.netlify.app 加入允許清單。',
+            status,
+            message
+        );
+    }
+    if (
+        status === 429
+        || normalized.includes('resource exhausted')
+        || normalized.includes('quota')
+    ) {
+        return new GeminiRequestError(
+            'Gemini API 額度暫時用完，請稍後再試，並確認這個 Key 所屬專案已啟用計費。',
+            status,
+            message
+        );
+    }
+    if (
+        status === 403
+        || normalized.includes('permission denied')
+        || normalized.includes('forbidden')
+        || normalized.includes('has not been used')
+        || normalized.includes('is disabled')
+    ) {
+        return new GeminiRequestError(
+            '這個 Key 目前沒有 Gemini API 使用權限，請確認已啟用 Gemini API 與計費。',
+            status,
+            message
+        );
+    }
+
+    return new GeminiRequestError(
+        message || `Gemini API 錯誤（${status}）`,
+        status,
+        message
+    );
+};
+
 const cleanJsonText = (text: string): string => {
     const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const firstBrace = cleaned.indexOf('{');
@@ -77,7 +154,11 @@ const parseGeminiJson = (data: GeminiResponse): unknown => {
 
 const isRetryableModelError = (error: unknown): boolean => {
     if (!(error instanceof Error)) return false;
-    const message = error.message.toLowerCase();
+    const message = (
+        error instanceof GeminiRequestError
+            ? `${error.message} ${error.rawMessage}`
+            : error.message
+    ).toLowerCase();
     return message === '429'
         || message.includes('not found')
         || message.includes('not supported')
@@ -89,7 +170,11 @@ const isRetryableModelError = (error: unknown): boolean => {
 
 const isRetryableKeyError = (error: unknown): boolean => {
     if (!(error instanceof Error)) return false;
-    const message = error.message.toLowerCase();
+    const message = (
+        error instanceof GeminiRequestError
+            ? `${error.message} ${error.rawMessage}`
+            : error.message
+    ).toLowerCase();
     return message.includes('api key not valid')
         || message.includes('invalid api key')
         || message.includes('permission denied')
@@ -105,7 +190,8 @@ const fetchGemini = async <T>(
     updateStatus: ((status: string) => void) | null
 ): Promise<T> => {
     updateStatus?.(`${label}：${model} 分析中...`);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+    const normalizedKey = normalizeGeminiApiKey(key);
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(normalizedKey)}`;
     const parts: GeminiRequestPart[] = [{ text: prompt }];
     for (const image of options.images ?? []) {
         parts.push({ inlineData: { mimeType: image.mimeType, data: image.data } });
@@ -130,12 +216,60 @@ const fetchGemini = async <T>(
         })
     });
 
-    if (response.status === 429) throw new Error('429');
     const data = await response.json() as GeminiResponse;
     if (!response.ok || data.error) {
-        throw new Error(data.error?.message || `Gemini API 錯誤（${response.status}）`);
+        throw createGeminiRequestError(
+            data.error?.message || `Gemini API 錯誤（${response.status}）`,
+            response.status
+        );
     }
     return parseGeminiJson(data) as T;
+};
+
+export const validateGeminiApiKey = async (key: string): Promise<string> => {
+    const normalizedKey = normalizeGeminiApiKey(key);
+    if (!normalizedKey) {
+        throw new Error('請先輸入 Gemini API Key');
+    }
+
+    let lastError: unknown = null;
+    for (const model of FOOD_MODELS) {
+        try {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(normalizedKey)}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            role: 'user',
+                            parts: [{ text: 'Reply with exactly OK.' }]
+                        }],
+                        generationConfig: { maxOutputTokens: 8 }
+                    })
+                }
+            );
+            const data = await response.json() as GeminiResponse;
+            if (response.ok && !data.error) return model;
+
+            const error = createGeminiRequestError(
+                data.error?.message || `Gemini API 錯誤（${response.status}）`,
+                response.status
+            );
+            lastError = error;
+            if (isRetryableModelError(error)) continue;
+            throw error;
+        } catch (error) {
+            if (error instanceof GeminiRequestError) throw error;
+            if (error instanceof TypeError) {
+                throw new Error('目前無法連線到 Gemini，請檢查網路後再試。');
+            }
+            lastError = error;
+        }
+    }
+
+    if (lastError instanceof Error) throw lastError;
+    throw new Error('目前找不到可用的 Gemini 食物辨識模型，請稍後再試。');
 };
 
 export const callGeminiStructured = async <T = Record<string, unknown>>(
@@ -149,18 +283,18 @@ export const callGeminiStructured = async <T = Record<string, unknown>>(
         .filter((model, index, all) => all.indexOf(model) === index);
 
     const keyCandidates = options.paidOnly
-        ? [{ key: apiKeys.paid, label: '付費金鑰' }]
+        ? [{ key: normalizeGeminiApiKey(apiKeys.paid), label: '付費金鑰' }]
         : [
-            { key: apiKeys.free1, label: '免費金鑰' },
-            { key: apiKeys.free2, label: '免費金鑰' },
-            { key: apiKeys.free3, label: '免費金鑰' },
-            { key: apiKeys.free4, label: '免費金鑰' },
-            { key: apiKeys.free5, label: '免費金鑰' },
-            { key: apiKeys.paid, label: '付費金鑰' }
+            { key: normalizeGeminiApiKey(apiKeys.free1), label: '免費金鑰' },
+            { key: normalizeGeminiApiKey(apiKeys.free2), label: '免費金鑰' },
+            { key: normalizeGeminiApiKey(apiKeys.free3), label: '免費金鑰' },
+            { key: normalizeGeminiApiKey(apiKeys.free4), label: '免費金鑰' },
+            { key: normalizeGeminiApiKey(apiKeys.free5), label: '免費金鑰' },
+            { key: normalizeGeminiApiKey(apiKeys.paid), label: '付費金鑰' }
         ];
 
     if (options.paidOnly && !apiKeys.paid) {
-        throw new Error('食物照片與健康備註只使用付費 Gemini 服務，請先在設定中填入 Paid Key');
+        throw new Error('食物照片與健康備註只使用付費 Gemini 服務，請先在設定中填入 Gemini API Key');
     }
     if (!keyCandidates.some(candidate => candidate.key)) {
         throw new Error('請先到設定填入 Google Gemini API Key');
@@ -189,7 +323,7 @@ export const callGeminiStructured = async <T = Record<string, unknown>>(
         }
     }
 
-    if (lastError instanceof Error && lastError.message !== '429') throw lastError;
+    if (lastError instanceof Error) throw lastError;
     throw new Error('所有可用的 Gemini 模型目前都無法使用，請稍後再試');
 };
 
