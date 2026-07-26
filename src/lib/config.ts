@@ -12,6 +12,7 @@ export const CONFIG = {
     DEFAULT_TARGET: 1700, // Default daily calorie target
     DEFAULT_ACTIVITY_TARGET: 400, // Default daily activity calorie target
     DEFAULT_WATER_TARGET: 2000,   // Default daily water target in ml
+    INDEX_FINGER_WIDTH_CM: 1.3,   // Peter 的食指寬度，食物照片比例尺
 
     // Macro targets
     PRO_TARGET: 90,       // Protein target in grams

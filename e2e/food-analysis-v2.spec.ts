@@ -60,6 +60,7 @@ test('分項重量、食用比例與 g 單位可完整走完一次', async ({ pa
     const body = request.postDataJSON();
     expect(body.generationConfig.mediaResolution).toBe('MEDIA_RESOLUTION_HIGH');
     expect(body.generationConfig.responseJsonSchema).toBeTruthy();
+    expect(body.contents[0].parts[0].text).toContain('食指寬度約為 1.3 公分');
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

@@ -443,6 +443,9 @@ const App: React.FC = () => {
             referenceSizeCm.trim()
               ? `照片中的盤子、碗或參考物已知尺寸為 ${referenceSizeCm.trim()} 公分。`
               : '沒有提供已知尺寸。'
+          ).replace(
+            '{{INDEX_FINGER_WIDTH}}',
+            String(CONFIG.INDEX_FINGER_WIDTH_CM)
           );
         }
       } else {
