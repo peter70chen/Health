@@ -122,6 +122,26 @@ const createGeminiRequestError = (message: string, status: number): GeminiReques
     );
 };
 
+export const simplifyGeminiJsonSchema = (
+    value: unknown
+): unknown => {
+    if (Array.isArray(value)) return value.map(simplifyGeminiJsonSchema);
+    if (!value || typeof value !== 'object') return value;
+
+    const unsupportedForComplexSchemas = new Set([
+        'additionalProperties',
+        'minimum',
+        'maximum',
+        'minItems',
+        'maxItems'
+    ]);
+    return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+            .filter(([key]) => !unsupportedForComplexSchemas.has(key))
+            .map(([key, child]) => [key, simplifyGeminiJsonSchema(child)])
+    );
+};
+
 const cleanJsonText = (text: string): string => {
     const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const firstBrace = cleaned.indexOf('{');
@@ -201,22 +221,47 @@ const fetchGemini = async <T>(
         responseMimeType: 'application/json'
     };
     if (options.responseJsonSchema) {
-        generationConfig.responseJsonSchema = options.responseJsonSchema;
+        // Gemini rejects deeply nested schemas when they also contain several
+        // validation constraints. The App still applies the complete Zod schema
+        // after the response, so only the transport schema needs simplifying.
+        generationConfig.responseJsonSchema = simplifyGeminiJsonSchema(options.responseJsonSchema);
     }
     if ((options.images?.length ?? 0) > 0 && options.mediaResolution === 'high') {
         generationConfig.mediaResolution = 'MEDIA_RESOLUTION_HIGH';
     }
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ role: 'user', parts }],
-            generationConfig
-        })
-    });
+    const sendRequest = async (
+        requestParts: GeminiRequestPart[],
+        requestGenerationConfig: Record<string, unknown>
+    ): Promise<{ response: Response; data: GeminiResponse }> => {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ role: 'user', parts: requestParts }],
+                generationConfig: requestGenerationConfig
+            })
+        });
+        return { response, data: await response.json() as GeminiResponse };
+    };
 
-    const data = await response.json() as GeminiResponse;
+    let { response, data } = await sendRequest(parts, generationConfig);
+    const schemaWasRejected = (
+        response.status === 400
+        && Boolean(options.responseJsonSchema)
+        && (data.error?.message ?? '').toLowerCase().includes('invalid argument')
+    );
+    if (schemaWasRejected) {
+        const fallbackConfig = { ...generationConfig };
+        delete fallbackConfig.responseJsonSchema;
+        const schemaHint = JSON.stringify(simplifyGeminiJsonSchema(options.responseJsonSchema));
+        const fallbackParts: GeminiRequestPart[] = [
+            { text: `${prompt}\n\n請嚴格依照以下 JSON 結構回傳：\n${schemaHint}` },
+            ...parts.slice(1)
+        ];
+        ({ response, data } = await sendRequest(fallbackParts, fallbackConfig));
+    }
+
     if (!response.ok || data.error) {
         throw createGeminiRequestError(
             data.error?.message || `Gemini API 錯誤（${response.status}）`,

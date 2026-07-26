@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   callGeminiStructured,
   normalizeGeminiApiKey,
+  simplifyGeminiJsonSchema,
   validateGeminiApiKey
 } from '../src/services/gemini';
 import type { ApiKeys } from '../src/types';
@@ -88,5 +89,68 @@ describe('Gemini API key validation', () => {
     }));
 
     await expect(validateGeminiApiKey('bad-key')).rejects.toThrow('API Key 無效');
+  });
+});
+
+describe('Gemini structured-output compatibility', () => {
+  it('removes constraints that make deeply nested Gemini schemas fail', () => {
+    const schema = simplifyGeminiJsonSchema({
+      type: 'array',
+      minItems: 1,
+      maxItems: 5,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          amount: { type: 'number', minimum: 0, maximum: 100 }
+        }
+      }
+    });
+
+    expect(schema).toEqual({
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          amount: { type: 'number' }
+        }
+      }
+    });
+  });
+
+  it('retries with a schema hint when Gemini rejects the schema parameter', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: { message: 'Request contains an invalid argument.' } })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }]
+        })
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(callGeminiStructured(
+      'analyze food',
+      null,
+      keys,
+      {
+        paidOnly: true,
+        responseJsonSchema: {
+          type: 'object',
+          required: ['ok'],
+          properties: { ok: { type: 'boolean' } }
+        }
+      }
+    )).resolves.toMatchObject({ data: { ok: true } });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const retryPayload = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(retryPayload.generationConfig.responseJsonSchema).toBeUndefined();
+    expect(retryPayload.contents[0].parts[0].text).toContain('請嚴格依照以下 JSON 結構回傳');
   });
 });
