@@ -36,16 +36,24 @@ interface InputModalProps {
   // AI Analysis
   selectedImage: File | null;
   imagePreview: string | null;
+  referenceImage: File | null;
+  referenceImagePreview: string | null;
   imageNotes: string;
   setImageNotes: (notes: string) => void;
+  referenceSizeCm: string;
+  setReferenceSizeCm: (value: string) => void;
   manualText: string;
   setManualText: (text: string) => void;
   isAnalyzing: boolean;
   analysisStatus: string;
   fileInputRef: React.RefObject<HTMLInputElement>;
+  referenceFileInputRef: React.RefObject<HTMLInputElement>;
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleReferenceFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setSelectedImage: (file: File | null) => void;
   setImagePreview: (preview: string | null) => void;
+  setReferenceImage: (file: File | null) => void;
+  setReferenceImagePreview: (preview: string | null) => void;
   executeAnalysis: () => void;
 
   // Manual Input
@@ -87,16 +95,24 @@ export const InputModal: React.FC<InputModalProps> = ({
   setInputMethod,
   selectedImage,
   imagePreview,
+  referenceImage,
+  referenceImagePreview,
   imageNotes,
   setImageNotes,
+  referenceSizeCm,
+  setReferenceSizeCm,
   manualText,
   setManualText,
   isAnalyzing,
   analysisStatus,
   fileInputRef,
+  referenceFileInputRef,
   handleFileSelect,
+  handleReferenceFileSelect,
   setSelectedImage,
   setImagePreview,
+  setReferenceImage,
+  setReferenceImagePreview,
   executeAnalysis,
   manualForm,
   setManualForm,
@@ -340,12 +356,62 @@ export const InputModal: React.FC<InputModalProps> = ({
                 <div className="space-y-4 animate-fadeIn">
                   <div className="relative">
                     {imagePreview && <img src={imagePreview} className="w-full h-48 object-cover rounded-xl border border-neutral-700" alt="Preview" />}
-                    <button onClick={() => { setSelectedImage(null); setImagePreview(null); }} className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full"><Icons.X /></button>
+                    <button onClick={() => {
+                      setSelectedImage(null);
+                      setImagePreview(null);
+                      setReferenceImage(null);
+                      setReferenceImagePreview(null);
+                    }} className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full"><Icons.X /></button>
                   </div>
+                  {inputModalType === 'food' && (
+                    <div>
+                      <input
+                        type="file"
+                        ref={referenceFileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleReferenceFileSelect}
+                      />
+                      {referenceImage && referenceImagePreview ? (
+                        <div className="relative">
+                          <img src={referenceImagePreview} className="w-full h-32 object-cover rounded-xl border border-neutral-700" alt="第二張參考照片" />
+                          <button
+                            onClick={() => { setReferenceImage(null); setReferenceImagePreview(null); }}
+                            className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full"
+                            aria-label="移除第二張照片"
+                          >
+                            <Icons.X />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => referenceFileInputRef.current?.click()}
+                          className="w-full min-h-[44px] rounded-lg border border-neutral-700 bg-neutral-800 text-sm font-bold text-neutral-300 hover:bg-neutral-700"
+                        >
+                          加入第二個角度（選填）
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-bold text-neutral-400 mb-1">補充說明 (選填)</label>
                     <textarea value={imageNotes} onChange={e => setImageNotes(e.target.value)} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-xl text-base text-white placeholder-neutral-500 focus:border-teal-500 outline-none resize-none" placeholder="例如：飯只吃了一半、去皮..." rows={2} />
                   </div>
+                  {inputModalType === 'food' && (
+                    <label className="block text-sm font-bold text-neutral-400">
+                      照片中參考物的已知尺寸（公分，選填）
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        step="0.1"
+                        value={referenceSizeCm}
+                        onChange={event => setReferenceSizeCm(event.target.value)}
+                        placeholder="例如盤子直徑 24"
+                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-800 p-3 text-base text-white outline-none focus:border-teal-500"
+                      />
+                    </label>
+                  )}
                   <button onClick={executeAnalysis} disabled={isAnalyzing} className="w-full bg-teal-600 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-lg hover:bg-teal-500 active:scale-[0.98] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     {isAnalyzing ? (<><Icons.Loader2 className="animate-spin w-5 h-5" /> {analysisStatus || "辨識中..."}</>) : (<><Icons.Rocket /> 開始分析</>)}
                   </button>

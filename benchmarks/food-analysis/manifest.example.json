@@ -1,0 +1,40 @@
+{
+  "name": "personal-food-benchmark",
+  "requiredRunsPerCase": 3,
+  "cases": [
+    {
+      "id": "example-bagel-half",
+      "groundTruth": {
+        "calories": 140,
+        "protein": 5,
+        "carbs": 27,
+        "fat": 1,
+        "fiber": 1,
+        "amount": 50
+      },
+      "runs": [
+        {
+          "caseId": "example-bagel-half",
+          "variant": "gemini-3.6-flash-food-v2",
+          "valid": true,
+          "confidence": "medium",
+          "recognizedCorrectly": true,
+          "predicted": {
+            "calories": 150,
+            "protein": 5,
+            "carbs": 29,
+            "fat": 1,
+            "fiber": 1,
+            "amount": 55
+          },
+          "range": {
+            "low": 130,
+            "high": 175
+          },
+          "latencyMs": 2800,
+          "estimatedCostUsd": 0.004
+        }
+      ]
+    }
+  ]
+}

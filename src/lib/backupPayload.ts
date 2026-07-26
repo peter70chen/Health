@@ -30,6 +30,7 @@ export type ExportData = {
   waterTarget: number;
   resistanceDefs: ResistanceDef[];
   resistanceLogs: ResistanceLog[];
+  foodCorrectionMemory?: string;
 };
 
 /** 手動匯出與雲端備份共用的資料淨化 */

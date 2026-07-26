@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icons } from '../Icons';
 import { NUTRIENTS } from '../../lib/nutrientTheme';
+import { getActivityWarnings, getFoodWarnings, getWaterWarnings } from '../../lib/analysisWarnings';
+import { updateFoodItemGrams } from '../../lib/foodAnalysis';
+import { CONFIG } from '../../lib/config';
 import type { AnalyzedFood, AnalyzedActivity, AnalyzedWater, SaveLogType } from '../../types';
 
 interface AnalysisResultProps {
@@ -15,6 +18,9 @@ interface AnalysisResultProps {
   addToFavorites: boolean;
   setAddToFavorites: (add: boolean) => void;
   saveLog: (type: SaveLogType) => void;
+  isAnalyzing: boolean;
+  onRefineFood: (answers: string, usePro: boolean) => void;
+  onCancel: () => void;
 }
 
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
@@ -28,11 +34,24 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   setPortion,
   addToFavorites,
   setAddToFavorites,
-  saveLog
+  saveLog,
+  isAnalyzing,
+  onRefineFood,
+  onCancel
 }) => {
+  const [clarificationAnswer, setClarificationAnswer] = useState('');
+  useEffect(() => {
+    setClarificationAnswer('');
+  }, [analyzedFood?.analysis?.analyzedAt]);
   if (!analyzedFood && !analyzedActivity && !analyzedWater) return null;
 
-  const warnings = analyzedFood?.warnings || analyzedActivity?.warnings || analyzedWater?.warnings || [];
+  const warnings = analyzedFood
+    ? getFoodWarnings(analyzedFood)
+    : analyzedActivity
+      ? getActivityWarnings(analyzedActivity)
+      : analyzedWater
+        ? getWaterWarnings(analyzedWater)
+        : [];
 
   return (
     <div className="bg-neutral-900 border-2 border-teal-500 p-5 rounded-2xl shadow-xl animate-fadeIn relative">
@@ -55,11 +74,18 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           )}
           {analyzedFood ? (
             <div className="flex flex-col gap-1">
-              <span className={`${NUTRIENTS.calories.text} text-sm font-bold`}>原始熱量: {analyzedFood.calories} kcal</span>
-              <span className={`${NUTRIENTS.protein.text} text-sm font-bold`}>原始蛋白: {analyzedFood.protein || 0}g</span>
-              <span className={`${NUTRIENTS.carbs.text} text-sm font-bold`}>原始碳水: {analyzedFood.carbs || 0}g</span>
-              <span className={`${NUTRIENTS.fat.text} text-sm font-bold`}>原始脂肪: {analyzedFood.fat || 0}g</span>
-              <span className={`${NUTRIENTS.fiber.text} text-sm font-bold`}>原始纖維: {analyzedFood.fiber || 0}g</span>
+              <span className={`${NUTRIENTS.calories.text} text-sm font-bold`}>
+                估計整份: {analyzedFood.calories} kcal
+                {analyzedFood.calorieRange && (
+                  <span className="ml-1 text-xs font-medium text-neutral-400">
+                    ({analyzedFood.calorieRange.low.calories}-{analyzedFood.calorieRange.high.calories})
+                  </span>
+                )}
+              </span>
+              <span className="text-xs text-neutral-400">
+                約 {analyzedFood.amount || 0}g
+                {analyzedFood.analysis?.model && ` · ${analyzedFood.analysis.model}`}
+              </span>
             </div>
           ) : (
             analyzedWater ? (
@@ -76,6 +102,58 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
       {analyzedFood && (
         <div className="bg-neutral-800/50 p-4 rounded-xl mb-4 border border-neutral-700">
+          {analyzedFood.clarificationQuestions && analyzedFood.clarificationQuestions.length > 0 && (
+            <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-950/30 p-3">
+              <div className="text-xs font-bold text-amber-300 mb-1">這些資訊可讓估算更準</div>
+              {analyzedFood.clarificationQuestions.map(question => (
+                <div key={question} className="text-xs text-amber-100">・{question}</div>
+              ))}
+              <textarea
+                value={clarificationAnswer}
+                onChange={event => setClarificationAnswer(event.target.value)}
+                rows={2}
+                placeholder="直接回答上面的問題"
+                className="mt-3 w-full resize-none rounded-lg border border-amber-500/30 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-amber-400"
+              />
+              <button
+                onClick={() => onRefineFood(clarificationAnswer, false)}
+                disabled={isAnalyzing || !clarificationAnswer.trim()}
+                className="mt-2 min-h-[44px] w-full rounded-lg bg-amber-600 text-sm font-bold text-white hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                依補充內容重新分析
+              </button>
+            </div>
+          )}
+
+          {analyzedFood.items && analyzedFood.items.length > 0 && (
+            <div className="mb-4">
+              <div className="text-xs font-bold text-neutral-300 mb-2">照片中的食物項目</div>
+              <div className="space-y-2">
+                {analyzedFood.items.map(item => (
+                  <div key={item.id} className="grid grid-cols-[1fr_92px] gap-3 items-center rounded-lg bg-neutral-900/70 border border-neutral-700 p-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-white break-words">{item.name}</div>
+                      <div className="text-[11px] text-neutral-500 mt-0.5">
+                        範圍 {item.grams.low}-{item.grams.high}g · {item.confidence === 'high' ? '高把握' : item.confidence === 'medium' ? '中等把握' : '低把握'}
+                      </div>
+                      {item.evidence && <div className="text-[11px] text-neutral-400 mt-1">{item.evidence}</div>}
+                    </div>
+                    <label className="text-[11px] font-bold text-neutral-400">
+                      重量 g
+                      <input
+                        type="number"
+                        min="0"
+                        value={item.grams.mid}
+                        onChange={event => setAnalyzedFood(updateFoodItemGrams(analyzedFood, item.id, Number(event.target.value) || 0))}
+                        className="mt-1 w-full bg-neutral-950 border border-neutral-600 rounded-lg px-2 py-2 text-sm text-white outline-none focus:border-teal-500"
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 mb-4">
             <label className="col-span-2 text-xs font-bold text-neutral-400">
               食物名稱
@@ -103,8 +181,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             </label>
           </div>
           <div className="flex justify-between items-center mb-2">
-            <label className="font-bold text-neutral-300 text-sm">食用份量/比例</label>
-            <span className="font-bold text-teal-400 text-lg">{portion} 份</span>
+            <label className="font-bold text-neutral-300 text-sm">我實際吃了多少</label>
+            <span className="font-bold text-teal-400 text-lg">{Math.round(portion * 100)}%</span>
           </div>
           <input type="range" min="0.1" max="3" step="0.1" value={portion} onChange={e => setPortion(parseFloat(e.target.value))} className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-teal-500" />
           <div className="grid grid-cols-5 mt-3 pt-3 border-t border-neutral-700 text-center divide-x divide-neutral-700">
@@ -114,6 +192,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             <div><div className="text-[11px] text-neutral-400">脂肪</div><div className={`text-base font-bold ${NUTRIENTS.fat.text}`}>{Math.round((analyzedFood.fat || 0) * portion)}</div></div>
             <div><div className="text-[11px] text-neutral-400">纖維</div><div className={`text-base font-bold ${NUTRIENTS.fiber.text}`}>{Math.round((analyzedFood.fiber || 0) * portion)}</div></div>
           </div>
+          {CONFIG.ENABLE_PRO_REVIEW && analyzedFood.analysis && analyzedFood.confidence !== 'high' && (
+            <button
+              onClick={() => onRefineFood('', true)}
+              disabled={isAnalyzing}
+              className="mt-4 min-h-[44px] w-full rounded-lg border border-teal-500/50 bg-teal-950/30 text-sm font-bold text-teal-300 hover:bg-teal-900/40 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              用 Pro 精準模式重看
+            </button>
+          )}
         </div>
       )}
 
@@ -196,6 +283,24 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         </div>
       )}
 
+      {analyzedFood && ((analyzedFood.observations?.length || 0) > 0 || (analyzedFood.assumptions?.length || 0) > 0) && (
+        <details className="mb-4 rounded-xl border border-neutral-700 bg-neutral-800/40 p-4 text-xs text-neutral-300">
+          <summary className="cursor-pointer font-bold text-neutral-300">判斷依據與不確定處</summary>
+          {(analyzedFood.observations?.length || 0) > 0 && (
+            <div className="mt-3">
+              <div className="font-bold text-teal-400 mb-1">照片看得到</div>
+              {analyzedFood.observations?.map(item => <div key={item}>・{item}</div>)}
+            </div>
+          )}
+          {(analyzedFood.assumptions?.length || 0) > 0 && (
+            <div className="mt-3">
+              <div className="font-bold text-amber-400 mb-1">仍需推測</div>
+              {analyzedFood.assumptions?.map(item => <div key={item}>・{item}</div>)}
+            </div>
+          )}
+        </details>
+      )}
+
       {(analyzedFood || analyzedWater) && (
         <div className="mb-4 flex items-center gap-2 cursor-pointer" onClick={() => setAddToFavorites(!addToFavorites)}>
           <div className={`w-5 h-5 rounded border flex items-center justify-center ${addToFavorites ? 'bg-rose-500 border-rose-500' : 'border-neutral-500'}`}>
@@ -212,7 +317,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         「取消 / 確認加入」永遠可見可點。-mx-5/-mb-5 抵銷卡片的 p-5 讓它貼齊卡片邊緣。
       */}
       <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pt-3 pb-[var(--action-bar-pad)] bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-800 rounded-b-2xl flex gap-3">
-        <button onClick={() => { setAnalyzedFood(null); setAnalyzedActivity(null); setAnalyzedWater(null) }} className="flex-1 py-4 text-base border border-neutral-700 rounded-xl font-bold text-neutral-400 hover:bg-neutral-800 active:scale-95 transition-all">取消</button>
+        <button onClick={onCancel} className="flex-1 py-4 text-base border border-neutral-700 rounded-xl font-bold text-neutral-400 hover:bg-neutral-800 active:scale-95 transition-all">取消</button>
         <button onClick={() => saveLog(analyzedFood ? 'food' : (analyzedWater ? 'water' : 'activity'))} className="flex-[2] py-4 text-base bg-teal-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-500 shadow-md active:scale-95 transition-all">
           <Icons.Save className="w-5 h-5" /> 確認加入
         </button>

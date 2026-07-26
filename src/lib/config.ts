@@ -24,6 +24,7 @@ export const CONFIG = {
     // 且 GLP-1 (猛健樂) 使用者常有噁心、脹氣、便秘等腸胃副作用，
     // 纖維過量會加重不適，25g 是飽足感與腸胃耐受度的平衡點。
     FIBER_TARGET: 25,     // Dietary fiber target in grams
+    ENABLE_PRO_REVIEW: false, // 完成真實照片 A/B 基準測試後才開啟
 } as const;
 
 /**
@@ -45,6 +46,7 @@ export const STORAGE_KEYS = {
     RESISTANCE_LOGS: 'mj_resistanceLogs',
     BACKUP_TOKEN: 'mj_backup_token',
     LAST_CLOUD_BACKUP: 'mj_last_cloud_backup',
+    FOOD_CORRECTION_MEMORY: 'mj_food_correction_memory',
 } as const;
 
 // For backwards compatibility

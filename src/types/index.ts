@@ -38,14 +38,20 @@ export interface FoodLog {
     baseFat?: number;
     baseFiber?: number;
     baseAmount?: number;
+    amountUnit?: 'g' | 'ml';
     portion?: number;
     amount?: number;
     isManual?: boolean;
     isHidden?: boolean;
     notes?: string;
     imagePreview?: string;
+    isText?: boolean;
     linkId?: number;
     _source?: string;
+    analysis?: FoodAnalysisMetadata;
+    analyzedItems?: AnalyzedFoodItem[];
+    calorieRange?: NutritionRange;
+    originalAnalysis?: NutritionValues;
 }
 
 // Activity Log Entry
@@ -95,6 +101,55 @@ export interface ChartData {
     ideal?: number;
 }
 
+export type FoodConfidence = 'high' | 'medium' | 'low';
+
+export type NutritionSource =
+    | 'nutrition_label'
+    | 'taiwan_database'
+    | 'user_confirmed'
+    | 'model_estimate';
+
+export interface NutritionValues {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number;
+}
+
+export interface NutritionRange {
+    low: NutritionValues;
+    high: NutritionValues;
+}
+
+export interface WeightEstimate {
+    low: number;
+    mid: number;
+    high: number;
+}
+
+export interface AnalyzedFoodItem {
+    id: string;
+    name: string;
+    category: string;
+    cookingMethod?: string;
+    grams: WeightEstimate;
+    originalGrams?: WeightEstimate;
+    gramsSource?: 'model' | 'user' | 'memory';
+    nutritionPer100g: NutritionValues;
+    nutritionSource: NutritionSource;
+    confidence: FoodConfidence;
+    evidence?: string;
+}
+
+export interface FoodAnalysisMetadata {
+    model: string;
+    promptVersion: string;
+    schemaVersion: string;
+    analyzedAt: string;
+    imageCount: number;
+}
+
 // Analyzed Food Result
 export interface AnalyzedFood {
     foodName: string;
@@ -106,10 +161,19 @@ export interface AnalyzedFood {
     amount?: number;
     notes?: string;
     /** AI 對這次辨識的把握程度，用來提醒使用者是否需人工微調 */
-    confidence?: 'high' | 'medium' | 'low';
+    confidence?: FoodConfidence;
     imagePreview?: string;
     isText?: boolean;
     warnings?: string[];
+    items?: AnalyzedFoodItem[];
+    calorieRange?: NutritionRange;
+    observations?: string[];
+    assumptions?: string[];
+    clarificationQuestions?: string[];
+    suggestedConsumedFraction?: number;
+    nutritionLabelDetected?: boolean;
+    analysis?: FoodAnalysisMetadata;
+    modelNutrition?: NutritionValues;
 }
 
 // Analyzed Activity Result
@@ -148,6 +212,8 @@ export interface FavoriteFood {
     carbs?: number;
     fat?: number;
     fiber?: number;
+    baseAmount?: number;
+    amountUnit?: 'g';
 }
 
 // Favorite Water Container

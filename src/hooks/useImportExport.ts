@@ -7,6 +7,7 @@ import {
   sanitizeWaterLogs
 } from '../lib/dataSanitizers';
 import { sanitizeExportData, type ExportData } from '../lib/backupPayload';
+import { STORAGE_KEYS } from '../lib/config';
 import { downloadJsonFile } from '../lib/download';
 import { sortByDateAndIdDesc } from '../lib/utils';
 import type {
@@ -149,6 +150,7 @@ export const useImportExport = ({
             ['教練建議', get('coachAdvice')],
             ['阻力項目', get('resistanceDefs')],
             ['阻力紀錄', get('resistanceLogs')],
+            ['食物校正記憶', get('foodCorrectionMemory')],
             ['每日熱量目標', get('dailyTarget')],
             ['每日運動目標', get('activityTarget')],
             ['每日飲水目標', get('waterTarget')]
@@ -182,6 +184,11 @@ export const useImportExport = ({
 
           const rd = get('resistanceDefs') as ResistanceDef[] | undefined; if (rd) { setResistanceDefs(rd); importCount++; }
           const rl = get('resistanceLogs') as ResistanceLog[] | undefined; if (rl) { setResistanceLogs(sortByDateAndIdDesc(rl)); importCount++; }
+          const correctionMemory = get('foodCorrectionMemory');
+          if (typeof correctionMemory === 'string') {
+            localStorage.setItem(STORAGE_KEYS.FOOD_CORRECTION_MEMORY, correctionMemory);
+            importCount++;
+          }
 
           const dt = get('dailyTarget') as number | undefined; if (dt !== undefined) { setDailyTarget(dt); importCount++; }
           const at = get('activityTarget') as number | undefined; if (at !== undefined) { setActivityTarget(at); importCount++; }

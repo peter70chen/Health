@@ -5,10 +5,14 @@ import { WeightChart } from './components/charts/WeightChart';
 import { InputModal, SettingsPanel, ConfirmModal, TargetModal, AnalysisResult, DataHealthPanel } from './components/modals';
 import { QuickWaterModal } from './components/modals/QuickWaterModal';
 import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, WeightForm, WeightList, WeightHistory } from './components/tabs';
-import { callGeminiWithFallback } from './services/gemini';
+import { callGeminiStructured, FOOD_MODELS, FOOD_REVIEW_MODEL } from './services/gemini';
+import type { GeminiImage } from './services/gemini';
 import { getActivityWarnings, getFoodWarnings, getWaterWarnings, normalizeConfidence } from './lib/analysisWarnings';
+import { FOOD_ANALYSIS_JSON_SCHEMA, parseFoodAnalysis } from './lib/foodAnalysis';
+import { applyFoodCorrectionMemory, rememberFoodCorrections } from './lib/foodCorrectionMemory';
+import { prepareImageForAnalysis } from './lib/imageProcessing';
 import { getDataHealthIssues } from './lib/dataHealth';
-import { PROMPTS } from './lib/prompts';
+import { FOOD_PROMPT_VERSION, PROMPTS } from './lib/prompts';
 import { CONFIG, STORAGE_KEYS } from './lib/config';
 import { NUTRIENTS } from './lib/nutrientTheme';
 import { removeTransientImagePreview } from './lib/dataSanitizers';
@@ -104,13 +108,18 @@ const App: React.FC = () => {
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [referenceImage, setReferenceImage] = useState<File | null>(null);
+  const [referenceImagePreview, setReferenceImagePreview] = useState<string | null>(null);
   const [imageNotes, setImageNotes] = useState("");
+  const [referenceSizeCm, setReferenceSizeCm] = useState("");
 
   const [analyzedFood, setAnalyzedFood] = useState<AnalyzedFood | null>(null);
   const [analyzedActivity, setAnalyzedActivity] = useState<AnalyzedActivity | null>(null);
   const [analyzedWater, setAnalyzedWater] = useState<AnalyzedWater | null>(null);
   const [manualForm, setManualForm] = useState<ManualFormState>({ name: '', val1: '', val2: '', val3: '', val4: '', val5: '' });
   const [portion, setPortion] = useState(1.0);
+  const [lastFoodPrompt, setLastFoodPrompt] = useState('');
+  const lastFoodImagesRef = useRef<GeminiImage[]>([]);
 
   const [isCoachThinking, setIsCoachThinking] = useState(false);
   const [coachAdvice, setCoachAdvice] = useState('');
@@ -129,6 +138,7 @@ const App: React.FC = () => {
   const [historyEndDate, setHistoryEndDate] = useState(getLocalISOString());
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const referenceFileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const analysisResultRef = useRef<HTMLDivElement>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -190,7 +200,10 @@ const App: React.FC = () => {
       setPortion(1.0);
       setSelectedImage(null);
       setImagePreview(null);
+      setReferenceImage(null);
+      setReferenceImagePreview(null);
       setImageNotes("");
+      setReferenceSizeCm("");
       setAddToFavorites(false);
       // Reset resistance session mostly, but if we have existing log for today, load it?
       // For now, start fresh or load if viewing history.
@@ -275,7 +288,8 @@ const App: React.FC = () => {
     activityTarget,
     waterTarget,
     resistanceDefs,
-    resistanceLogs
+    resistanceLogs,
+    foodCorrectionMemory: localStorage.getItem(STORAGE_KEYS.FOOD_CORRECTION_MEMORY) || '{}'
   };
 
   const { handleExport, handleImport, applyImportedData } = useImportExport({
@@ -321,22 +335,45 @@ const App: React.FC = () => {
     }
   };
 
+  const handleReferenceFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (referenceImagePreview) URL.revokeObjectURL(referenceImagePreview);
+    const file = e.target.files?.[0];
+    if (file) {
+      setReferenceImage(file);
+      setReferenceImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const executeAnalysis = async () => {
     const currentType = inputModalType;
     setIsAnalyzing(true);
     setAnalysisStatus("準備中...");
     try {
-      let prompt = '', img: string | null = null;
+      let prompt = '';
+      let img: string | null = null;
+      let imageMimeType = 'image/jpeg';
+      let referenceImg: string | null = null;
       if (selectedImage) {
-        img = await new Promise<string>(r => {
-          const rd = new FileReader();
-          rd.onload = () => r((rd.result as string).split(',')[1]);
-          rd.readAsDataURL(selectedImage);
-        });
+        setAnalysisStatus('正在整理照片...');
+        const prepared = await prepareImageForAnalysis(selectedImage);
+        img = prepared.data;
+        imageMimeType = prepared.mimeType;
+        if (currentType === 'food' && referenceImage) {
+          setAnalysisStatus('正在整理第二張照片...');
+          referenceImg = (await prepareImageForAnalysis(referenceImage)).data;
+        }
         if (currentType === 'food') prompt = PROMPTS.foodImage;
         else if (currentType === 'activity') prompt = PROMPTS.activityImage;
         else prompt = PROMPTS.waterImage;
         prompt = prompt.replace('{{NOTES}}', imageNotes);
+        if (currentType === 'food') {
+          prompt = prompt.replace(
+            '{{REFERENCE_SIZE}}',
+            referenceSizeCm.trim()
+              ? `照片中的盤子、碗或參考物已知尺寸為 ${referenceSizeCm.trim()} 公分。`
+              : '沒有提供已知尺寸。'
+          );
+        }
       } else {
         if (!manualText.trim()) { setStatusMessage({ type: 'error', text: "請先輸入描述或選擇照片" }); setIsAnalyzing(false); return; }
         if (currentType === 'water') {
@@ -345,28 +382,141 @@ const App: React.FC = () => {
           prompt = (currentType === 'food' ? PROMPTS.foodText : PROMPTS.activityText).replace('{{TEXT}}', manualText);
         }
       }
-      const res = await callGeminiWithFallback<AnalyzedFood | AnalyzedActivity | AnalyzedWater>(prompt, img, setAnalysisStatus, apiKeys);
-      if (!res.notes) res.notes = "本次分析未產生額外建議。";
-      const obj = { ...res, imagePreview: imagePreview || undefined, isText: !img };
+
       setPortion(1.0);
       setAnalyzedFood(null); setAnalyzedActivity(null); setAnalyzedWater(null);
+      if (currentType !== 'food') {
+        lastFoodImagesRef.current = [];
+        setLastFoodPrompt('');
+      }
       if (currentType === 'food') {
-        const food = obj as AnalyzedFood;
-        // AI 的 confidence 大小寫/措辭不可靠，正規化後才進 state
-        setAnalyzedFood({ ...food, confidence: normalizeConfidence(food.confidence), warnings: getFoodWarnings(food) });
+        setLastFoodPrompt(prompt);
+        const foodImages: GeminiImage[] = [
+          ...(img ? [{ mimeType: imageMimeType, data: img }] : []),
+          ...(referenceImg ? [{ mimeType: 'image/jpeg', data: referenceImg }] : [])
+        ];
+        lastFoodImagesRef.current = foodImages;
+        const result = await callGeminiStructured(
+          prompt,
+          setAnalysisStatus,
+          apiKeys,
+          {
+            images: foodImages,
+            responseJsonSchema: FOOD_ANALYSIS_JSON_SCHEMA,
+            paidOnly: true,
+            preferredModel: FOOD_MODELS[0],
+            fallbackModels: [FOOD_MODELS[1]],
+            mediaResolution: 'high'
+          }
+        );
+        const food = applyFoodCorrectionMemory(parseFoodAnalysis(result.data, {
+          model: result.model,
+          promptVersion: FOOD_PROMPT_VERSION,
+          schemaVersion: 'food-analysis-v2',
+          analyzedAt: new Date().toISOString(),
+          imageCount: img ? (referenceImg ? 2 : 1) : 0
+        }));
+        const normalizedFood = {
+          ...food,
+          imagePreview: imagePreview || undefined,
+          isText: !img,
+          confidence: normalizeConfidence(food.confidence)
+        };
+        normalizedFood.warnings = getFoodWarnings(normalizedFood);
+        setPortion(food.suggestedConsumedFraction ?? 1);
+        setAnalyzedFood(normalizedFood);
       }
       else if (currentType === 'activity') {
-        const activity = obj as AnalyzedActivity;
+        const activity = (await callGeminiStructured<AnalyzedActivity>(
+          prompt,
+          setAnalysisStatus,
+          apiKeys,
+          {
+            images: img ? [{ mimeType: imageMimeType, data: img }] : [],
+            paidOnly: true
+          }
+        )).data;
+        if (!activity.notes) activity.notes = "本次分析未產生額外建議。";
+        activity.imagePreview = imagePreview || undefined;
+        activity.isText = !img;
         setAnalyzedActivity({ ...activity, warnings: getActivityWarnings(activity) });
       }
       else {
-        const water = obj as AnalyzedWater;
+        const water = (await callGeminiStructured<AnalyzedWater>(
+          prompt,
+          setAnalysisStatus,
+          apiKeys,
+          {
+            images: img ? [{ mimeType: imageMimeType, data: img }] : [],
+            paidOnly: true
+          }
+        )).data;
+        if (!water.notes) water.notes = "本次分析未產生額外建議。";
+        water.imagePreview = imagePreview || undefined;
+        water.isText = !img;
         setAnalyzedWater({ ...water, warnings: getWaterWarnings(water) });
       }
       setManualText(''); setImageNotes('');
       setInputModalType(null);
     } catch (e: unknown) { setStatusMessage({ type: 'error', text: "分析失敗：" + getErrorMessage(e) }); }
     finally { setIsAnalyzing(false); setAnalysisStatus(""); }
+  };
+
+  const refineFoodAnalysis = async (answers: string, usePro: boolean) => {
+    if (!analyzedFood || !lastFoodPrompt) return;
+    setIsAnalyzing(true);
+    setAnalysisStatus(usePro ? '精準模式重新分析中...' : '依補充內容重新分析中...');
+    try {
+      const images = lastFoodImagesRef.current;
+      if ((analyzedFood.analysis?.imageCount ?? 0) > 0 && images.length === 0) {
+        throw new Error('原始照片已清除，請重新選擇照片分析');
+      }
+      const refinement = answers.trim()
+        ? `\n\n【使用者針對前次問題的補充】\n${answers.trim()}\n請依補充內容重新估計所有項目。`
+        : '\n\n請用精準模式重新檢查食物辨識、份量範圍與營養來源。';
+      const result = await callGeminiStructured(
+        `${lastFoodPrompt}${refinement}`,
+        setAnalysisStatus,
+        apiKeys,
+        {
+          images,
+          responseJsonSchema: FOOD_ANALYSIS_JSON_SCHEMA,
+          paidOnly: true,
+          preferredModel: usePro ? FOOD_REVIEW_MODEL : FOOD_MODELS[0],
+          fallbackModels: usePro ? [FOOD_MODELS[0]] : [FOOD_MODELS[1]],
+          mediaResolution: images.length > 0 ? 'high' : undefined
+        }
+      );
+      const food = applyFoodCorrectionMemory(parseFoodAnalysis(result.data, {
+        model: result.model,
+        promptVersion: `${FOOD_PROMPT_VERSION}${usePro ? '-pro-review' : '-refined'}`,
+        schemaVersion: 'food-analysis-v2',
+        analyzedAt: new Date().toISOString(),
+        imageCount: images.length
+      }));
+      const nextFood = {
+        ...food,
+        imagePreview: analyzedFood.imagePreview,
+        isText: analyzedFood.isText,
+        confidence: normalizeConfidence(food.confidence)
+      };
+      nextFood.warnings = getFoodWarnings(nextFood);
+      setPortion(food.suggestedConsumedFraction ?? portion);
+      setAnalyzedFood(nextFood);
+    } catch (error) {
+      setStatusMessage({ type: 'error', text: `重新分析失敗：${getErrorMessage(error)}` });
+    } finally {
+      setIsAnalyzing(false);
+      setAnalysisStatus('');
+    }
+  };
+
+  const clearAnalysisResults = () => {
+    setAnalyzedFood(null);
+    setAnalyzedActivity(null);
+    setAnalyzedWater(null);
+    lastFoodImagesRef.current = [];
+    setLastFoodPrompt('');
   };
 
   const handleAskCoach = async () => {
@@ -415,7 +565,12 @@ const App: React.FC = () => {
         .replace('{{proTarget}}', String(CONFIG.PRO_TARGET))
         .replace('{{fiberTarget}}', String(CONFIG.FIBER_TARGET))
         .replace('{{dose}}', String(currentDose));
-      const res = await callGeminiWithFallback<{ advice?: string; reply?: string }>(prompt, null, setCoachStatus, apiKeys);
+      const res = (await callGeminiStructured<{ advice?: string; reply?: string }>(
+        prompt,
+        setCoachStatus,
+        apiKeys,
+        { paidOnly: true }
+      )).data;
       setCoachAdvice(res.advice || res.reply || '');
     } catch (e: unknown) { setStatusMessage({ type: 'error', text: "教練分析失敗：" + getErrorMessage(e) }); }
     finally { setIsCoachThinking(false); setCoachStatus(""); }
@@ -483,7 +638,12 @@ const App: React.FC = () => {
 
       const prompt = PROMPTS.resistanceCalc.replace('{{weight}}', String(currentWeight)).replace('{{items}}', itemsList);
 
-      const res = await callGeminiWithFallback<{ totalCalories?: number; notes?: string }>(prompt, null, setAnalysisStatus, apiKeys);
+      const res = (await callGeminiStructured<{ totalCalories?: number; notes?: string }>(
+        prompt,
+        setAnalysisStatus,
+        apiKeys,
+        { paidOnly: true }
+      )).data;
 
       const totalCalories = res.totalCalories || 0;
       const notes = res.notes || "";
@@ -610,6 +770,7 @@ const App: React.FC = () => {
             baseFat: 0,
             baseFiber: 0,
             baseAmount: Math.round(amount),
+            amountUnit: 'ml',
             amount: Math.round(amount),
             portion: 1,
             isManual: true
@@ -624,6 +785,7 @@ const App: React.FC = () => {
       setInputModalType(null);
     }
     else if (type === 'food' && analyzedFood) {
+      rememberFoodCorrections(analyzedFood);
       if (addToFavorites) {
         setFavoriteFoods(prev => [{
           id: now + 1,
@@ -632,7 +794,9 @@ const App: React.FC = () => {
           protein: analyzedFood.protein,
           carbs: analyzedFood.carbs,
           fat: analyzedFood.fat,
-          fiber: analyzedFood.fiber
+          fiber: analyzedFood.fiber,
+          baseAmount: analyzedFood.amount,
+          amountUnit: 'g'
         }, ...prev]);
       }
       const finalCal = Math.round(analyzedFood.calories * portion);
@@ -658,14 +822,27 @@ const App: React.FC = () => {
         baseFat: Math.round(analyzedFood.fat || 0),
         baseFiber: Math.round(analyzedFood.fiber || 0),
         baseAmount,
+        amountUnit: 'g',
         amount: baseAmount ? Math.round(baseAmount * portion) : undefined,
         notes: analyzedFood.notes,
         imagePreview: analyzedFood.imagePreview,
         isText: analyzedFood.isText,
-        portion: portion
+        portion: portion,
+        analysis: analyzedFood.analysis,
+        analyzedItems: analyzedFood.items,
+        calorieRange: analyzedFood.calorieRange,
+        originalAnalysis: analyzedFood.modelNutrition ?? {
+          calories: Math.round(analyzedFood.calories || 0),
+          protein: analyzedFood.protein || 0,
+          carbs: analyzedFood.carbs || 0,
+          fat: analyzedFood.fat || 0,
+          fiber: analyzedFood.fiber || 0
+        }
       }), ...p]);
 
       setAnalyzedFood(null);
+      lastFoodImagesRef.current = [];
+      setLastFoodPrompt('');
     }
     else if (type === 'activity' && analyzedActivity) {
       setActivityLogs(p => [removeTransientImagePreview({
@@ -714,7 +891,7 @@ const App: React.FC = () => {
         const finalCarbs = Math.round((analyzedWater.carbs || 0) * portion);
         const finalFat = Math.round((analyzedWater.fat || 0) * portion);
         const finalWaterFiber = Math.round((analyzedWater.fiber || 0) * portion);
-        setFoodLogs(p => [{ id: now + 2, linkId: linkId, date: logDate, type: 'food', foodName: analyzedWater.beverageName || '', calories: finalCal, protein: finalPro, carbs: finalCarbs, fat: finalFat, fiber: finalWaterFiber, baseCalories: Math.round(analyzedWater.calories || 0), baseProtein: Math.round(analyzedWater.protein || 0), baseCarbs: Math.round(analyzedWater.carbs || 0), baseFat: Math.round(analyzedWater.fat || 0), baseFiber: Math.round(analyzedWater.fiber || 0), baseAmount: Math.round(analyzedWater.amount || 0), portion: portion, isManual: true, amount: finalAmount }, ...p]);
+        setFoodLogs(p => [{ id: now + 2, linkId: linkId, date: logDate, type: 'food', foodName: analyzedWater.beverageName || '', calories: finalCal, protein: finalPro, carbs: finalCarbs, fat: finalFat, fiber: finalWaterFiber, baseCalories: Math.round(analyzedWater.calories || 0), baseProtein: Math.round(analyzedWater.protein || 0), baseCarbs: Math.round(analyzedWater.carbs || 0), baseFat: Math.round(analyzedWater.fat || 0), baseFiber: Math.round(analyzedWater.fiber || 0), baseAmount: Math.round(analyzedWater.amount || 0), amountUnit: 'ml', portion: portion, isManual: true, amount: finalAmount }, ...p]);
       }
       setAnalyzedWater(null);
     }
@@ -732,7 +909,13 @@ const App: React.FC = () => {
 
   const selectFavorite = (item: FavoriteSelectable) => {
     if (inputModalType === 'water' && 'amount' in item) setAnalyzedWater({ ...item, imagePreview: undefined });
-    else if ('foodName' in item) setAnalyzedFood({ ...item, imagePreview: undefined });
+    else if ('foodName' in item) {
+      setAnalyzedFood({
+        ...item,
+        amount: item.baseAmount,
+        imagePreview: undefined
+      });
+    }
     setPortion(1.0);
     setInputModalType(null);
   };
@@ -1044,7 +1227,7 @@ const App: React.FC = () => {
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center text-neutral-400 bg-black">Loading...</div>;
-  const hasAnyKey = apiKeys.free1 || apiKeys.free2 || apiKeys.free3 || apiKeys.free4 || apiKeys.free5 || apiKeys.paid;
+  const hasAnyKey = apiKeys.paid;
   const isViewingHistory = currentViewDate !== today;
   const editingFood = editingFoodPortion ? foodLogs.find(food => food.id === editingFoodPortion.id) : undefined;
   const editingFoodBase = editingFood ? getFoodBaseValues(editingFood) : null;
@@ -1226,16 +1409,24 @@ const App: React.FC = () => {
               setInputMethod={setInputMethod}
               selectedImage={selectedImage}
               imagePreview={imagePreview}
+              referenceImage={referenceImage}
+              referenceImagePreview={referenceImagePreview}
               imageNotes={imageNotes}
               setImageNotes={setImageNotes}
+              referenceSizeCm={referenceSizeCm}
+              setReferenceSizeCm={setReferenceSizeCm}
               manualText={manualText}
               setManualText={setManualText}
               isAnalyzing={isAnalyzing}
               analysisStatus={analysisStatus}
               fileInputRef={fileInputRef}
+              referenceFileInputRef={referenceFileInputRef}
               handleFileSelect={handleFileSelect}
+              handleReferenceFileSelect={handleReferenceFileSelect}
               setSelectedImage={setSelectedImage}
               setImagePreview={setImagePreview}
+              setReferenceImage={setReferenceImage}
+              setReferenceImagePreview={setReferenceImagePreview}
               executeAnalysis={executeAnalysis}
               manualForm={manualForm}
               setManualForm={setManualForm}
@@ -1285,6 +1476,9 @@ const App: React.FC = () => {
                 addToFavorites={addToFavorites}
                 setAddToFavorites={setAddToFavorites}
                 saveLog={saveLog}
+                isAnalyzing={isAnalyzing}
+                onRefineFood={refineFoodAnalysis}
+                onCancel={clearAnalysisResults}
               />
             </div>
             {/* Daily List */}

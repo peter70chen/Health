@@ -1,4 +1,5 @@
 import type { AnalyzedActivity, AnalyzedFood, AnalyzedWater } from '../types';
+import { calculateFoodTotals } from './foodAnalysis';
 
 /**
  * 正規化 AI 回傳的 confidence。
@@ -40,6 +41,27 @@ export const getFoodWarnings = (food: AnalyzedFood): string[] => {
   if (fat > 120) warnings.push('脂肪偏高：單筆脂肪超過 120g，請確認是否合理。');
   if (fiber > 40) warnings.push('纖維偏高：單筆膳食纖維超過 40g，AI 容易高估纖維，請確認。');
   if (fiber > 0 && fiber > carbs) warnings.push('纖維大於碳水：膳食纖維本身計入碳水，數值不合理，建議調低纖維。');
+  if (food.confidence === 'low') warnings.push('辨識把握度低：建議回答補充問題、調整分項重量，或使用 Pro 精準模式重看。');
+  if (food.calorieRange && calories > 0) {
+    const rangeWidth = food.calorieRange.high.calories - food.calorieRange.low.calories;
+    if (rangeWidth / calories > 0.5) {
+      warnings.push('熱量範圍較寬：照片中的份量或油脂不明，請優先確認分項重量。');
+    }
+  }
+  if (food.items?.length) {
+    for (const item of food.items) {
+      if (item.nutritionPer100g.calories > 900) {
+        warnings.push(`${item.name} 每 100g 熱量超過 900 kcal，數值不可能，請重新確認。`);
+      }
+      if (item.nutritionPer100g.fiber > item.nutritionPer100g.carbs) {
+        warnings.push(`${item.name} 的纖維高於總碳水，分項營養值不合理。`);
+      }
+    }
+    const itemTotals = calculateFoodTotals(food.items).mid;
+    if (calories > 0 && Math.abs(itemTotals.calories - calories) / calories > 0.05) {
+      warnings.push('分項加總和整餐熱量不一致，請重新確認分項重量。');
+    }
+  }
   if (calories > 0 && estimatedMacroCalories > 0) {
     const diffRatio = Math.abs(estimatedMacroCalories - calories) / calories;
     if (diffRatio > 0.45) {

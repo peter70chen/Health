@@ -61,7 +61,10 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     </div>
                     <div className="text-xs text-neutral-500 font-medium mt-0.5 flex flex-wrap gap-x-2">
                       {(l.amount ?? 0) > 0 && (
-                        <span className="text-blue-400 flex items-center gap-1"><Icons.Water className="w-3 h-3" /> {l.amount} ml</span>
+                        <span className={l.amountUnit === 'ml' || (!l.amountUnit && l.linkId) ? 'text-blue-400 flex items-center gap-1' : 'text-neutral-400'}>
+                          {(l.amountUnit === 'ml' || (!l.amountUnit && l.linkId)) && <Icons.Water className="w-3 h-3" />}
+                          {l.amount} {l.amountUnit ?? (l.linkId ? 'ml' : 'g')}
+                        </span>
                       )}
                       <span>+{l.calories} kcal</span>
                       <span className={NUTRIENTS.protein.text}>{NUTRIENTS.protein.short}:{l.protein || 0}g</span>

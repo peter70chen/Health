@@ -83,7 +83,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <label className="block text-sm font-bold text-neutral-400 mb-2">
             Google Gemini API Keys
             <span className="block text-[10px] font-normal text-neutral-500 mt-1">
-              目前照片辨識模型：Gemini 3.6 Flash（自動備援 3.5 Flash / Flash-Lite / Pro）
+              食物照片：Gemini 3.6 Flash（3.5 Flash 備援），固定使用 Paid Key
+            </span>
+            <span className="block text-[10px] font-normal text-neutral-500 mt-1">
+              下方 Free Keys 僅保留給非個人資料測試；App 內的健康分析一律使用 Paid Key
             </span>
           </label>
           {[1, 2, 3, 4, 5].map(i => (
@@ -92,7 +95,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
           ))}
           <div className="mt-2">
-            <input type="password" value={apiKeys.paid} onChange={e => setApiKeys(p => ({ ...p, paid: e.target.value }))} placeholder="Paid Key (Backup)" className="w-full p-2 border rounded-lg text-xs bg-neutral-800 border-orange-900/50 focus:border-orange-500 outline-none text-orange-200" />
+            <input type="password" value={apiKeys.paid} onChange={e => setApiKeys(p => ({ ...p, paid: e.target.value }))} placeholder="Paid Key（食物照片與健康備註）" className="w-full p-2 border rounded-lg text-xs bg-neutral-800 border-orange-900/50 focus:border-orange-500 outline-none text-orange-200" />
+            <p className="mt-1 text-[10px] leading-relaxed text-neutral-500">
+              食物照片與健康備註不會使用免費層。照片只在分析當下送出，不會存進每日紀錄或備份。
+            </p>
           </div>
         </div>
         <div className="border-t border-neutral-700 pt-4">
