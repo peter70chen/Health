@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Icons } from '../Icons';
 import { SortableItem } from '../ui/SortableItem';
+import { DialogShell } from '../ui/DialogShell';
 import { scrollFieldIntoView } from '../../lib/scroll';
 import { NUTRIENTS } from '../../lib/nutrientTheme';
 import {
@@ -15,6 +16,7 @@ import {
   DragStartEvent,
   DragEndEvent,
   TouchSensor,
+  type DraggableAttributes,
   type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
 import {
@@ -194,13 +196,13 @@ export const InputModal: React.FC<InputModalProps> = ({
     setActiveItem(null);
   };
 
-  const renderFoodItem = (fav: FavoriteFood, listeners?: DraggableSyntheticListeners) => (
+  const renderFoodItem = (fav: FavoriteFood, attributes?: DraggableAttributes, listeners?: DraggableSyntheticListeners) => (
     <div className="bg-neutral-800 p-3 rounded-xl border border-neutral-700 flex justify-between items-center transition-all hover:bg-neutral-700 select-none">
       <div className="flex items-center gap-2">
-        <div className="p-2 -ml-2 text-neutral-600 cursor-grab active:cursor-grabbing touch-none" {...listeners}>
+        <button type="button" aria-label={`拖曳排序 ${fav.foodName}`} className="min-w-[44px] min-h-[44px] -ml-3 text-neutral-400 cursor-grab active:cursor-grabbing touch-none flex items-center justify-center" {...attributes} {...listeners}>
           <Icons.GripVertical className="w-5 h-5" />
-        </div>
-        <div onClick={() => selectFavorite(fav)} className="flex-1 cursor-pointer">
+        </button>
+        <button type="button" onClick={() => selectFavorite(fav)} className="flex-1 text-left">
           <div className="font-bold text-neutral-200">{fav.foodName}</div>
           <div className="text-xs text-neutral-400 mt-1 flex flex-wrap gap-x-2">
             <span className={NUTRIENTS.calories.text}>{fav.calories} kcal</span>
@@ -209,54 +211,57 @@ export const InputModal: React.FC<InputModalProps> = ({
             <span className={NUTRIENTS.fat.text}>{NUTRIENTS.fat.short}:{fav.fat || 0}</span>
             <span className={NUTRIENTS.fiber.text}>{NUTRIENTS.fiber.short}:{fav.fiber || 0}</span>
           </div>
-        </div>
+        </button>
       </div>
-      <button onClick={(e) => deleteFavorite(fav.id, e)} className="text-neutral-400 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
+      <button aria-label={`刪除常用食物 ${fav.foodName}`} onClick={(e) => deleteFavorite(fav.id, e)} className="text-neutral-300 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
     </div>
   );
 
-  const renderWaterItem = (fav: FavoriteWaterContainer, listeners?: DraggableSyntheticListeners) => (
+  const renderWaterItem = (fav: FavoriteWaterContainer, attributes?: DraggableAttributes, listeners?: DraggableSyntheticListeners) => (
     <div className="bg-neutral-800 p-3 rounded-xl border border-neutral-700 flex justify-between items-center transition-all hover:bg-neutral-700 select-none">
       <div className="flex items-center gap-2">
-        <div className="p-2 -ml-2 text-neutral-600 cursor-grab active:cursor-grabbing touch-none" {...listeners}>
+        <button type="button" aria-label={`拖曳排序 ${fav.beverageName}`} className="min-w-[44px] min-h-[44px] -ml-3 text-neutral-400 cursor-grab active:cursor-grabbing touch-none flex items-center justify-center" {...attributes} {...listeners}>
           <Icons.GripVertical className="w-5 h-5" />
-        </div>
-        <div onClick={() => selectFavorite(fav)} className="flex-1 cursor-pointer">
+        </button>
+        <button type="button" onClick={() => selectFavorite(fav)} className="flex-1 text-left">
           <div className="font-bold text-neutral-200">{fav.beverageName}</div>
           <div className="text-xs text-neutral-400 mt-1 flex gap-2">
             <span className="text-blue-400">{fav.amount} ml</span>
             {(fav.calories || 0) > 0 && <span className={NUTRIENTS.calories.text}>{fav.calories} kcal</span>}
           </div>
-        </div>
+        </button>
       </div>
-      <button onClick={(e) => deleteFavorite(fav.id, e)} className="text-neutral-400 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
+      <button aria-label={`刪除常用容器 ${fav.beverageName}`} onClick={(e) => deleteFavorite(fav.id, e)} className="text-neutral-300 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
     </div>
   );
 
-  const renderResistanceItem = (def: ResistanceDef, listeners?: DraggableSyntheticListeners) => {
+  const renderResistanceItem = (def: ResistanceDef, attributes?: DraggableAttributes, listeners?: DraggableSyntheticListeners) => {
     const activeItem = resistanceSession.find(i => i.defId === def.id);
     const isChecked = !!activeItem;
     return (
       <div className={`bg-neutral-800 border ${isChecked ? 'border-teal-500/50' : 'border-neutral-700'} rounded-xl p-3 transition-all select-none`}>
         <div className="flex items-center justify-between mb-2">
-          <label className="flex items-center gap-2 select-none">
-            <div className="p-2 -ml-2 text-neutral-600 cursor-grab active:cursor-grabbing touch-none" {...listeners}>
+          <div className="flex items-center gap-1 min-w-0">
+            <button type="button" aria-label={`拖曳排序 ${def.name}`} className="min-w-[44px] min-h-[44px] -ml-3 text-neutral-400 cursor-grab active:cursor-grabbing touch-none flex items-center justify-center" {...attributes} {...listeners}>
               <Icons.GripVertical className="w-5 h-5" />
-            </div>
-            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors cursor-pointer ${isChecked ? 'bg-teal-500 border-teal-500' : 'border-neutral-500'}`} onClick={() => toggleResistanceItem(def)}>
-              {isChecked && <Icons.Check className="w-3.5 h-3.5 text-white" />}
-            </div>
-            <span className={`text-sm font-bold cursor-pointer ${isChecked ? 'text-white' : 'text-neutral-400'}`} onClick={() => toggleResistanceItem(def)}>{def.name}</span>
-          </label>
-          <button onClick={(e) => handleDeleteResistanceDef(def.id, e)} className="text-neutral-400 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
+            </button>
+            <label className="relative flex items-center gap-2 min-h-[44px] cursor-pointer select-none min-w-0">
+              <input type="checkbox" checked={isChecked} onChange={() => toggleResistanceItem(def)} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 peer" />
+              <span aria-hidden="true" className={`pointer-events-none w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-teal-300 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-neutral-800 ${isChecked ? 'bg-teal-500 border-teal-500' : 'border-neutral-400'}`}>
+                {isChecked && <Icons.Check className="w-3.5 h-3.5 text-white" />}
+              </span>
+              <span className={`text-sm font-bold truncate ${isChecked ? 'text-white' : 'text-neutral-300'}`}>{def.name}</span>
+            </label>
+          </div>
+          <button aria-label={`刪除阻力運動 ${def.name}`} onClick={(e) => handleDeleteResistanceDef(def.id, e)} className="text-neutral-300 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.Trash className="w-4 h-4" /></button>
         </div>
 
         {isChecked && (
-          <div className="grid grid-cols-4 gap-2 pl-11 animate-fadeIn">
-            <div><label className="text-[10px] text-neutral-500 block mb-0.5">重量(kg)</label><input type="number" value={activeItem?.weight || ''} onChange={e => updateResistanceItem(def.id, 'weight', e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-teal-500" placeholder="0" /></div>
-            <div><label className="text-[10px] text-neutral-500 block mb-0.5">每組次數</label><input type="number" value={activeItem?.reps || ''} onChange={e => updateResistanceItem(def.id, 'reps', e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-teal-500" placeholder="0" /></div>
-            <div><label className="text-[10px] text-neutral-500 block mb-0.5">組數</label><input type="number" value={activeItem?.sets || ''} onChange={e => updateResistanceItem(def.id, 'sets', e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-teal-500" placeholder="0" /></div>
-            <div><label className="text-[10px] text-neutral-500 block mb-0.5">每組時間(秒)</label><input type="number" value={activeItem?.time || ''} onChange={e => updateResistanceItem(def.id, 'time', e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-teal-500" placeholder="選填" /></div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 animate-fadeIn">
+            <label className="text-xs text-neutral-300 block">重量 (kg)<input aria-label={`${def.name} 重量`} type="number" value={activeItem?.weight || ''} onChange={e => updateResistanceItem(def.id, 'weight', e.target.value)} className="mt-1 min-h-[44px] w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" placeholder="0" /></label>
+            <label className="text-xs text-neutral-300 block">每組次數<input aria-label={`${def.name} 每組次數`} type="number" value={activeItem?.reps || ''} onChange={e => updateResistanceItem(def.id, 'reps', e.target.value)} className="mt-1 min-h-[44px] w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" placeholder="0" /></label>
+            <label className="text-xs text-neutral-300 block">組數<input aria-label={`${def.name} 組數`} type="number" value={activeItem?.sets || ''} onChange={e => updateResistanceItem(def.id, 'sets', e.target.value)} className="mt-1 min-h-[44px] w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" placeholder="0" /></label>
+            <label className="text-xs text-neutral-300 block">每組時間 (秒)<input aria-label={`${def.name} 每組時間`} type="number" value={activeItem?.time || ''} onChange={e => updateResistanceItem(def.id, 'time', e.target.value)} className="mt-1 min-h-[44px] w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500" placeholder="選填" /></label>
           </div>
         )}
       </div>
@@ -272,25 +277,27 @@ export const InputModal: React.FC<InputModalProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4 animate-fadeIn" onClick={e => { if (e.target === e.currentTarget) setInputModalType(null) }}>
-        <div
-          className="bg-neutral-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-5 mb-6 sm:mb-0 border border-neutral-800 max-h-[85vh] overflow-y-auto"
-        >
+      <DialogShell
+        labelledBy="input-dialog-title"
+        onClose={() => setInputModalType(null)}
+        overlayClassName="bg-black/80 z-50 flex items-end sm:items-center justify-center p-4"
+        panelClassName="bg-neutral-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-5 mb-6 sm:mb-0 border border-neutral-800 max-h-[85dvh] overflow-y-auto"
+      >
           <div className="flex justify-between border-b border-neutral-800 pb-3 items-center">
-            <h3 className="font-bold text-xl text-white">
+            <h3 id="input-dialog-title" className="font-bold text-xl text-white">
               {inputModalType === 'food' ? '記錄飲食' : (inputModalType === 'water' ? '記錄飲水' : '記錄運動')}
             </h3>
-            <button onClick={() => setInputModalType(null)} className="text-neutral-300 hover:text-white active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.X /></button>
+            <button data-dialog-autofocus aria-label={`關閉${inputModalType === 'food' ? '飲食' : (inputModalType === 'water' ? '飲水' : '運動')}記錄`} onClick={() => setInputModalType(null)} className="text-neutral-200 hover:text-white active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"><Icons.X /></button>
           </div>
 
-          <div className="flex bg-neutral-800 p-1 rounded-xl">
-            <button onClick={() => setInputMethod('ai')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${inputMethod === 'ai' ? 'bg-neutral-700 text-teal-400 shadow-sm' : 'text-neutral-400'}`}>AI 分析</button>
-            <button onClick={() => setInputMethod('manual')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${inputMethod === 'manual' ? 'bg-neutral-700 text-teal-400 shadow-sm' : 'text-neutral-400'}`}>手動</button>
+          <div className="flex bg-neutral-800 p-1 rounded-xl" aria-label="記錄方式">
+            <button aria-pressed={inputMethod === 'ai'} onClick={() => setInputMethod('ai')} className={`flex-1 min-h-[44px] py-2 text-sm font-bold rounded-lg transition-colors ${inputMethod === 'ai' ? 'bg-neutral-700 text-teal-300 shadow-sm' : 'text-neutral-300'}`}>AI 分析</button>
+            <button aria-pressed={inputMethod === 'manual'} onClick={() => setInputMethod('manual')} className={`flex-1 min-h-[44px] py-2 text-sm font-bold rounded-lg transition-colors ${inputMethod === 'manual' ? 'bg-neutral-700 text-teal-300 shadow-sm' : 'text-neutral-300'}`}>手動</button>
             {inputModalType === 'activity' && (
-              <button onClick={() => setInputMethod('resistance')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${inputMethod === 'resistance' ? 'bg-neutral-700 text-teal-400 shadow-sm' : 'text-neutral-400'}`}>阻力</button>
+              <button aria-pressed={inputMethod === 'resistance'} onClick={() => setInputMethod('resistance')} className={`flex-1 min-h-[44px] py-2 text-sm font-bold rounded-lg transition-colors ${inputMethod === 'resistance' ? 'bg-neutral-700 text-teal-300 shadow-sm' : 'text-neutral-300'}`}>阻力</button>
             )}
             {(inputModalType === 'food' || inputModalType === 'water') && (
-              <button onClick={() => setInputMethod('favorites')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${inputMethod === 'favorites' ? 'bg-rose-900/50 text-rose-400 shadow-sm' : 'text-neutral-400'}`}>常用</button>
+              <button aria-pressed={inputMethod === 'favorites'} onClick={() => setInputMethod('favorites')} className={`flex-1 min-h-[44px] py-2 text-sm font-bold rounded-lg transition-colors ${inputMethod === 'favorites' ? 'bg-rose-900/50 text-rose-300 shadow-sm' : 'text-neutral-300'}`}>常用</button>
             )}
           </div>
 
@@ -301,7 +308,7 @@ export const InputModal: React.FC<InputModalProps> = ({
                 <SortableContext items={favoriteFoods.map((_, i) => `favFood-${i}`)} strategy={verticalListSortingStrategy}>
                   {favoriteFoods.map((fav, index) => (
                     <SortableItem key={fav.id} id={`favFood-${index}`}>
-                      {({ listeners }) => renderFoodItem(fav, listeners)}
+                      {({ attributes, listeners }) => renderFoodItem(fav, attributes, listeners)}
                     </SortableItem>
                   ))}
                 </SortableContext>
@@ -318,7 +325,7 @@ export const InputModal: React.FC<InputModalProps> = ({
                 <SortableContext items={favoriteWaterContainers.map((_, i) => `favWater-${i}`)} strategy={verticalListSortingStrategy}>
                   {favoriteWaterContainers.map((fav, index) => (
                     <SortableItem key={fav.id} id={`favWater-${index}`}>
-                      {({ listeners }) => renderWaterItem(fav, listeners)}
+                      {({ attributes, listeners }) => renderWaterItem(fav, attributes, listeners)}
                     </SortableItem>
                   ))}
                 </SortableContext>
@@ -342,11 +349,12 @@ export const InputModal: React.FC<InputModalProps> = ({
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
                   <div className="relative flex py-2 items-center">
                     <div className="flex-grow border-t border-neutral-800"></div>
-                    <span className="mx-4 text-xs text-neutral-500">或輸入文字</span>
+                    <span className="mx-4 text-xs text-neutral-400">或輸入文字</span>
                     <div className="flex-grow border-t border-neutral-800"></div>
                   </div>
                   <div className="space-y-3">
-                    <textarea value={manualText} onChange={e => setManualText(e.target.value)} className="w-full p-4 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none resize-none focus:border-teal-500 transition-colors text-white placeholder-neutral-500" placeholder={inputModalType === 'food' ? "例如：吃了一個雞腿便當..." : "例如：慢跑30分鐘..."} rows={3} />
+                    <label htmlFor="ai-text-input" className="sr-only">{inputModalType === 'food' ? '描述飲食內容' : '描述運動內容'}</label>
+                    <textarea id="ai-text-input" value={manualText} onChange={e => setManualText(e.target.value)} className="w-full p-4 bg-neutral-800 border border-neutral-700 rounded-xl text-base outline-none resize-none focus:border-teal-500 transition-colors text-white placeholder-neutral-400" placeholder={inputModalType === 'food' ? "例如：吃了一個雞腿便當..." : "例如：慢跑30分鐘..."} rows={3} />
                     <button onClick={executeAnalysis} disabled={isAnalyzing} className="w-full bg-teal-600 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-base hover:bg-teal-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                       {isAnalyzing ? (<><Icons.Loader2 className="animate-spin w-5 h-5" /> {analysisStatus || "辨識中..."}</>) : (<><Icons.ScanEye /> 開始 AI 分析</>)}
                     </button>
@@ -361,7 +369,7 @@ export const InputModal: React.FC<InputModalProps> = ({
                       setImagePreview(null);
                       setReferenceImage(null);
                       setReferenceImagePreview(null);
-                    }} className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full"><Icons.X /></button>
+                    }} aria-label="移除主要照片" className="absolute top-2 right-2 bg-black/70 text-white min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full"><Icons.X /></button>
                   </div>
                   {inputModalType === 'food' && (
                     <div>
@@ -377,7 +385,7 @@ export const InputModal: React.FC<InputModalProps> = ({
                           <img src={referenceImagePreview} className="w-full h-32 object-cover rounded-xl border border-neutral-700" alt="第二張參考照片" />
                           <button
                             onClick={() => { setReferenceImage(null); setReferenceImagePreview(null); }}
-                            className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full"
+                            className="absolute top-2 right-2 bg-black/70 text-white min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full"
                             aria-label="移除第二張照片"
                           >
                             <Icons.X />
@@ -427,15 +435,15 @@ export const InputModal: React.FC<InputModalProps> = ({
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-sm font-bold text-neutral-400">名稱</label>
                   {inputModalType === 'activity' && (
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <label className="flex items-center gap-1 text-[10px] text-neutral-400 cursor-pointer hover:text-teal-400 transition-colors">
-                        <input type="checkbox" checked={manualForm.name === '每日消耗'} onChange={() => setManualForm(p => ({ ...p, name: '每日消耗' }))} className="accent-teal-500" /> 每日消耗
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <label className="flex min-h-[44px] items-center gap-1 px-1 text-xs text-neutral-300 cursor-pointer hover:text-teal-300 transition-colors">
+                        <input type="radio" name="activity-preset" checked={manualForm.name === '每日消耗'} onChange={() => setManualForm(p => ({ ...p, name: '每日消耗' }))} className="accent-teal-500" /> 每日消耗
                       </label>
-                      <label className="flex items-center gap-1 text-[10px] text-neutral-400 cursor-pointer hover:text-teal-400 transition-colors">
-                        <input type="checkbox" checked={manualForm.name === '每日消耗（含運動）'} onChange={() => setManualForm(p => ({ ...p, name: '每日消耗（含運動）' }))} className="accent-teal-500" /> 每日消耗(含運動)
+                      <label className="flex min-h-[44px] items-center gap-1 px-1 text-xs text-neutral-300 cursor-pointer hover:text-teal-300 transition-colors">
+                        <input type="radio" name="activity-preset" checked={manualForm.name === '每日消耗（含運動）'} onChange={() => setManualForm(p => ({ ...p, name: '每日消耗（含運動）' }))} className="accent-teal-500" /> 每日消耗（含運動）
                       </label>
-                      <label className="flex items-center gap-1 text-[10px] text-neutral-400 cursor-pointer hover:text-teal-400 transition-colors">
-                        <input type="checkbox" checked={manualForm.name === '跑步機額外'} onChange={() => setManualForm(p => ({ ...p, name: '跑步機額外' }))} className="accent-teal-500" /> 跑步機額外
+                      <label className="flex min-h-[44px] items-center gap-1 px-1 text-xs text-neutral-300 cursor-pointer hover:text-teal-300 transition-colors">
+                        <input type="radio" name="activity-preset" checked={manualForm.name === '跑步機額外'} onChange={() => setManualForm(p => ({ ...p, name: '跑步機額外' }))} className="accent-teal-500" /> 跑步機額外
                       </label>
                     </div>
                   )}
@@ -474,12 +482,13 @@ export const InputModal: React.FC<InputModalProps> = ({
                 </div>
               )}
               {(inputModalType === 'food' || inputModalType === 'water') && (
-                <div className="flex items-center gap-2 pt-2 cursor-pointer" onClick={() => setAddToFavorites(!addToFavorites)}>
-                  <div className={`w-5 h-5 rounded border flex items-center justify-center ${addToFavorites ? 'bg-rose-500 border-rose-500' : 'border-neutral-500'}`}>
+                <label className="relative flex min-h-[44px] items-center gap-2 pt-2 cursor-pointer">
+                  <input type="checkbox" checked={addToFavorites} onChange={event => setAddToFavorites(event.target.checked)} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 peer" />
+                  <span aria-hidden="true" className={`pointer-events-none w-5 h-5 rounded border flex items-center justify-center peer-focus-visible:ring-2 peer-focus-visible:ring-rose-300 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-neutral-900 ${addToFavorites ? 'bg-rose-500 border-rose-500' : 'border-neutral-400'}`}>
                     {addToFavorites && <Icons.Check className="w-3.5 h-3.5 text-white" />}
-                  </div>
-                  <label className="text-sm text-neutral-300 font-bold cursor-pointer select-none">加入常用{inputModalType === 'water' ? '容器' : '食物'}</label>
-                </div>
+                  </span>
+                  <span className="text-sm text-neutral-200 font-bold select-none">加入常用{inputModalType === 'water' ? '容器' : '食物'}</span>
+                </label>
               )}
               {/*
                 手動表單加入纖維欄後更長，iOS 鍵盤彈出時很容易蓋住送出鈕。
@@ -498,20 +507,20 @@ export const InputModal: React.FC<InputModalProps> = ({
               <div className="flex justify-between items-center mb-2">
                 <label className="text-sm font-bold text-neutral-400">我的運動清單</label>
                 <div className="flex gap-2">
-                  <input type="text" value={newDefName} onChange={e => setNewDefName(e.target.value)} placeholder="新增項目..." className="bg-neutral-800 border border-neutral-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-teal-500 w-24" />
-                  <button onClick={handleAddResistanceDef} className="bg-teal-600 text-white px-2 py-1 rounded-lg text-xs font-bold hover:bg-teal-500"><Icons.Plus className="w-3 h-3" /></button>
+                  <input aria-label="新增阻力運動名稱" type="text" value={newDefName} onChange={e => setNewDefName(e.target.value)} placeholder="新增項目..." className="min-h-[44px] bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-teal-500 w-28" />
+                  <button aria-label="新增阻力運動" onClick={handleAddResistanceDef} className="min-w-[44px] min-h-[44px] bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-500 flex items-center justify-center"><Icons.Plus className="w-4 h-4" /></button>
                 </div>
               </div>
 
               {/* List */}
               <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
                 {resistanceDefs.length === 0 ? (
-                  <div className="text-center text-neutral-600 text-xs py-4">暫無項目，請由上方新增</div>
+                  <div className="text-center text-neutral-400 text-xs py-4">暫無項目，請由上方新增</div>
                 ) : (
                   <SortableContext items={resistanceDefs.map((_, i) => `resistance-${i}`)} strategy={verticalListSortingStrategy}>
                     {resistanceDefs.map((def, index) => (
                       <SortableItem key={def.id} id={`resistance-${index}`}>
-                        {({ listeners }) => renderResistanceItem(def, listeners)}
+                      {({ attributes, listeners }) => renderResistanceItem(def, attributes, listeners)}
                       </SortableItem>
                     ))}
                   </SortableContext>
@@ -529,9 +538,9 @@ export const InputModal: React.FC<InputModalProps> = ({
                   <div className="space-y-3">
                     {resistanceLogs.filter(l => l.date === (currentViewDate || getLocalISOString())).map(log => (
                       <div key={log.id} className="bg-neutral-800/50 rounded-xl p-3 border border-neutral-700 relative group">
-                        <button onClick={() => setConfirmModal({ id: log.id, type: 'resistanceLog' })} className="absolute top-2 right-2 text-neutral-600 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"><Icons.Trash className="w-3.5 h-3.5" /></button>
+                        <button aria-label="刪除此筆阻力訓練" onClick={() => setConfirmModal({ id: log.id, type: 'resistanceLog' })} className="absolute top-1 right-1 text-neutral-300 hover:text-red-500 min-w-[44px] min-h-[44px] flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><Icons.Trash className="w-4 h-4" /></button>
                         <div className="flex justify-between items-start mb-2">
-                          <div className="text-xs text-neutral-500">{new Date(log.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="text-xs text-neutral-400">{new Date(log.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                           <div className="text-teal-400 font-bold text-sm">+{log.totalCalories} kcal</div>
                         </div>
                         <div className="space-y-1">
@@ -542,7 +551,7 @@ export const InputModal: React.FC<InputModalProps> = ({
                             </div>
                           ))}
                         </div>
-                        {log.notes && <div className="mt-2 pt-2 border-t border-neutral-700/50 text-[10px] text-neutral-400 italic">{log.notes}</div>}
+                        {log.notes && <div className="mt-2 pt-2 border-t border-neutral-700/50 text-xs text-neutral-300 italic">{log.notes}</div>}
                       </div>
                     ))}
                   </div>
@@ -550,7 +559,7 @@ export const InputModal: React.FC<InputModalProps> = ({
               )}
             </div>
           )}
-        </div>
+      </DialogShell>
 
         {/* Drag Overlay for Visual Feedback */}
         <DragOverlay>
@@ -560,7 +569,6 @@ export const InputModal: React.FC<InputModalProps> = ({
                 activeId.startsWith('resistance') ? renderResistanceItem(activeItem as ResistanceDef) : null
           ) : null}
         </DragOverlay>
-      </div>
     </DndContext>
   );
 };

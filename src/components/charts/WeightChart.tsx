@@ -161,19 +161,23 @@ export const WeightChart: React.FC<WeightChartProps> = ({ data, targetWeight }) 
 
             {/* Legend */}
             <div className="flex justify-center gap-4 absolute -bottom-8 w-full text-xs text-neutral-400 font-medium">
-                <div
+                <button
+                    type="button"
                     onClick={() => setShowWeight(!showWeight)}
-                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${showWeight ? 'opacity-100' : 'opacity-40'}`}
+                    aria-pressed={showWeight}
+                    className={`min-h-[44px] px-2 flex items-center gap-1 cursor-pointer select-none transition-opacity ${showWeight ? 'opacity-100' : 'opacity-50'}`}
                 >
-                    <div className="w-2.5 h-2.5 rounded-full border border-teal-500 bg-teal-900"></div>體重
-                </div>
+                    <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full border border-teal-500 bg-teal-900"></span>體重
+                </button>
                 {hasBodyFat && (
-                    <div
+                    <button
+                        type="button"
                         onClick={() => setShowBodyFat(!showBodyFat)}
-                        className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${showBodyFat ? 'opacity-100' : 'opacity-40'}`}
+                        aria-pressed={showBodyFat}
+                        className={`min-h-[44px] px-2 flex items-center gap-1 cursor-pointer select-none transition-opacity ${showBodyFat ? 'opacity-100' : 'opacity-50'}`}
                     >
-                        <div className="w-2.5 h-2.5 rounded-full border border-rose-500 bg-rose-900"></div>體脂 %
-                    </div>
+                        <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full border border-rose-500 bg-rose-900"></span>體脂 %
+                    </button>
                 )}
             </div>
         </div>

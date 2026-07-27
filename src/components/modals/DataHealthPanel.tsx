@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icons } from '../Icons';
+import { DialogShell } from '../ui/DialogShell';
 import type { DataHealthIssue } from '../../lib/dataHealth';
 
 interface DataHealthPanelProps {
@@ -19,16 +20,20 @@ export const DataHealthPanel: React.FC<DataHealthPanelProps> = ({
   const warningCount = issues.filter(issue => issue.level === 'warning').length;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[999] flex items-end sm:items-center justify-center p-4 animate-fadeIn" onClick={e => { if (e.target === e.currentTarget) setShowDataHealth(false); }}>
-      <div className="bg-neutral-900 w-full max-w-md rounded-2xl p-6 shadow-2xl border border-neutral-800 max-h-[85vh] overflow-y-auto">
+    <DialogShell
+      labelledBy="data-health-dialog-title"
+      onClose={() => setShowDataHealth(false)}
+      overlayClassName="bg-black/80 z-[999] flex items-end sm:items-center justify-center p-4"
+      panelClassName="bg-neutral-900 w-full max-w-md rounded-2xl p-6 shadow-2xl border border-neutral-800 max-h-[85dvh] overflow-y-auto"
+    >
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <h3 id="data-health-dialog-title" className="text-xl font-bold text-white flex items-center gap-2">
               <Icons.ScanEye className="w-5 h-5 text-teal-400" /> 資料健康檢查
             </h3>
-            <p className="text-xs text-neutral-500 mt-1">檢查異常日期、極端數字、舊資料與失效圖片。</p>
+            <p className="text-sm text-neutral-400 mt-1">檢查異常日期、極端數字、舊資料與失效圖片。</p>
           </div>
-          <button onClick={() => setShowDataHealth(false)} className="text-neutral-400 p-2 hover:text-white"><Icons.X /></button>
+          <button data-dialog-autofocus aria-label="關閉資料健康檢查" onClick={() => setShowDataHealth(false)} className="text-neutral-300 min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-white"><Icons.X /></button>
         </div>
 
         {issues.length === 0 ? (
@@ -65,7 +70,6 @@ export const DataHealthPanel: React.FC<DataHealthPanelProps> = ({
         <button onClick={() => setShowDataHealth(false)} className="mt-5 w-full py-3 rounded-xl bg-neutral-800 text-neutral-200 font-bold hover:bg-neutral-700">
           關閉
         </button>
-      </div>
-    </div>
+    </DialogShell>
   );
 };

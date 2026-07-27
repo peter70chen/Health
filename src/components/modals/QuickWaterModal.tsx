@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from '../Icons';
+import { DialogShell } from '../ui/DialogShell';
 
 interface QuickWaterModalProps {
     isOpen: boolean;
@@ -44,26 +45,25 @@ export const QuickWaterModal: React.FC<QuickWaterModalProps> = ({ isOpen, onClos
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
-            {/* 背景遮罩 */}
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-
-            {/* 模態框內容 */}
-            <div
-                className="relative bg-neutral-900 rounded-2xl border border-neutral-700 shadow-2xl w-full max-w-sm overflow-hidden animate-fadeIn"
-                onClick={e => e.stopPropagation()}
-            >
+        <DialogShell
+            labelledBy="quick-water-dialog-title"
+            onClose={onClose}
+            initialFocusRef={inputRef}
+            overlayClassName="z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            panelClassName="relative bg-neutral-900 rounded-2xl border border-neutral-700 shadow-2xl w-full max-w-sm overflow-hidden"
+        >
                 {/* 標題列 */}
                 <div className="flex items-center justify-between p-4 border-b border-neutral-800">
                     <div className="flex items-center gap-2">
                         <div className="p-2 rounded-lg bg-blue-900/30 text-blue-400">
                             <Icons.Water className="w-5 h-5" />
                         </div>
-                        <h3 className="text-lg font-bold text-white">快速加水</h3>
+                        <h3 id="quick-water-dialog-title" className="text-lg font-bold text-white">快速加水</h3>
                     </div>
                     <button
+                        aria-label="關閉快速加水"
                         onClick={onClose}
-                        className="p-2 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors"
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors"
                     >
                         <Icons.X className="w-5 h-5" />
                     </button>
@@ -73,9 +73,10 @@ export const QuickWaterModal: React.FC<QuickWaterModalProps> = ({ isOpen, onClos
                 <div className="p-4 space-y-4">
                     {/* 數字輸入 */}
                     <div>
-                        <label className="text-xs font-bold text-neutral-400 block mb-2">輸入飲水量</label>
+                        <label htmlFor="quick-water-amount" className="text-sm font-bold text-neutral-300 block mb-2">輸入飲水量</label>
                         <div className="relative">
                             <input
+                                id="quick-water-amount"
                                 ref={inputRef}
                                 type="number"
                                 value={amount}
@@ -90,13 +91,14 @@ export const QuickWaterModal: React.FC<QuickWaterModalProps> = ({ isOpen, onClos
 
                     {/* 快捷選項 */}
                     <div>
-                        <label className="text-xs font-bold text-neutral-400 block mb-2">常用容量</label>
+                        <div className="text-sm font-bold text-neutral-300 block mb-2">常用容量</div>
                         <div className="grid grid-cols-4 gap-2">
                             {quickOptions.map(opt => (
                                 <button
                                     key={opt}
                                     onClick={() => setAmount(String(opt))}
-                                    className={`py-2 rounded-lg font-bold text-sm transition-colors ${amount === String(opt)
+                                    aria-pressed={amount === String(opt)}
+                                    className={`min-h-[44px] py-2 rounded-lg font-bold text-sm transition-colors ${amount === String(opt)
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'
                                         }`}
@@ -124,8 +126,7 @@ export const QuickWaterModal: React.FC<QuickWaterModalProps> = ({ isOpen, onClos
                         加入記錄
                     </button>
                 </div>
-            </div>
-        </div>
+        </DialogShell>
     );
 };
 

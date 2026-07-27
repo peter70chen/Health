@@ -75,16 +75,16 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
             // 鍵盤使用者會不知道焦點在哪。用 ring-offset-black 讓 ring 與卡片邊界分離。
             className="relative w-full h-20 bg-neutral-900 rounded-xl border border-neutral-800 px-4 py-3 flex items-center justify-between cursor-pointer overflow-hidden group hover:border-neutral-700 transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         >
-            <div className="z-10 flex flex-col gap-1">
-                <div className="text-neutral-400 text-xs font-bold flex items-center gap-1">
+            <div className="z-10 min-w-0 flex flex-col gap-1">
+                <div className="text-neutral-300 text-xs font-bold flex items-center gap-1 whitespace-nowrap">
                     <Icons.Water className="w-3.5 h-3.5 text-blue-400" /> 飲水追蹤
                     {onLongPress && (
-                        <span className="text-[9px] text-neutral-600 ml-1">(長按快速加水)</span>
+                        <span className="hidden min-[380px]:inline text-xs text-neutral-400 ml-1">(長按快速加水)</span>
                     )}
                 </div>
                 <div className="flex items-baseline gap-1">
                     <span className="text-xl font-black text-white">{current}</span>
-                    <span className="text-[10px] font-medium text-neutral-500">/ {target} ml</span>
+                    <span className="text-xs font-medium text-neutral-400">/ {target} ml</span>
                 </div>
                 {isReached && (
                     <div className="inline-flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-900/40 px-2 py-0.5 rounded-full w-fit">
@@ -93,7 +93,7 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
                 )}
             </div>
 
-            <div className="relative w-12 h-16 mr-2">
+            <div className="relative w-12 h-16 mr-2 shrink-0">
                 {/* Cup Body - using mask/clip-path for shape */}
                 <div
                     className="absolute inset-0 border-2 border-neutral-600 rounded-b-lg opacity-30"

@@ -4,6 +4,7 @@ import { TrendChart } from './components/charts/TrendChart';
 import { WeightChart } from './components/charts/WeightChart';
 import { InputModal, SettingsPanel, ConfirmModal, TargetModal, AnalysisResult, DataHealthPanel } from './components/modals';
 import { QuickWaterModal } from './components/modals/QuickWaterModal';
+import { DialogShell } from './components/ui/DialogShell';
 import { DashboardCard, ActionButtons, DailyList, CoachSection, WeightStats, WeightForm, WeightList, WeightHistory } from './components/tabs';
 import {
   callGeminiStructured,
@@ -1327,14 +1328,14 @@ const App: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-xl font-bold text-teal-400 flex items-center gap-2"><Icons.Activity /> Health Plan <span className="text-xs text-neutral-500 font-normal mt-1">{APP_DISPLAY_VERSION}</span></h1>
+      <header className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
+        <h1 className="text-lg min-[360px]:text-xl font-bold text-teal-400 flex items-center gap-2 whitespace-nowrap shrink-0"><Icons.Activity /> Health Plan <span className="hidden min-[380px]:inline text-xs text-neutral-400 font-normal mt-1">{APP_DISPLAY_VERSION}</span></h1>
         <div className="flex gap-2">
-          <button onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-400 ${hasAnyKey ? 'text-teal-400' : 'text-neutral-500'}`}><Icons.Settings /><span className="text-[10px] font-bold">SETTING</span></button>
-          <button onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-400 ${dataHealthIssues.length > 0 ? 'text-amber-400' : 'text-neutral-500'}`}><Icons.ScanEye /><span className="text-[10px] font-bold">CHECK</span></button>
-          <button onClick={handleTrainingExport} className="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] text-teal-400 hover:text-teal-300"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold">TRAIN</span></button>
+          <button aria-label="開啟設定" onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-300 ${hasAnyKey ? 'text-teal-300' : 'text-neutral-300'}`}><Icons.Settings /><span className="text-[10px] font-bold max-[340px]:sr-only">SETTING</span></button>
+          <button aria-label="資料健康檢查" onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-300 ${dataHealthIssues.length > 0 ? 'text-amber-300' : 'text-neutral-300'}`}><Icons.ScanEye /><span className="text-[10px] font-bold max-[340px]:sr-only">CHECK</span></button>
+          <button aria-label="匯出訓練資料" onClick={handleTrainingExport} className="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] text-teal-300 hover:text-teal-200"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold max-[340px]:sr-only">TRAIN</span></button>
         </div>
-      </div>
+      </header>
 
       <DataHealthPanel
         showDataHealth={showDataHealth}
@@ -1385,14 +1386,18 @@ const App: React.FC = () => {
       />
 
       {editingFood && editingFoodPortion && editingFoodBase && (
-        <div className="fixed inset-0 bg-black/80 z-[90] flex items-end sm:items-center justify-center p-4">
-          <div className="w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-2xl p-5 shadow-2xl animate-fadeIn">
+        <DialogShell
+          labelledBy="portion-dialog-title"
+          onClose={() => setEditingFoodPortion(null)}
+          overlayClassName="bg-black/80 z-[90] flex items-end sm:items-center justify-center p-4"
+          panelClassName="w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-2xl p-5 shadow-2xl"
+        >
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <div className="text-xs font-bold text-teal-400 mb-1">調整食用份量</div>
-                <h3 className="text-lg font-bold text-white leading-snug">{editingFood.foodName}</h3>
+                <h3 id="portion-dialog-title" className="text-lg font-bold text-white leading-snug">{editingFood.foodName}</h3>
               </div>
-              <button onClick={() => setEditingFoodPortion(null)} className="text-neutral-400 hover:text-white active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <button data-dialog-autofocus aria-label="關閉份量調整" onClick={() => setEditingFoodPortion(null)} className="text-neutral-300 hover:text-white active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <Icons.X className="w-5 h-5" />
               </button>
             </div>
@@ -1406,11 +1411,13 @@ const App: React.FC = () => {
                 min="0.1"
                 max="3"
                 step="0.1"
+                aria-label="食用份量"
+                aria-valuetext={`${editingFoodPortion.portion.toFixed(1)} 份`}
                 value={editingFoodPortion.portion}
                 onChange={e => updateEditingFoodPortion(parseFloat(e.target.value))}
                 className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
               />
-              <div className="flex justify-between text-xs text-neutral-500 mt-2">
+              <div className="flex justify-between text-xs text-neutral-400 mt-2">
                 <span>0.1</span>
                 <span>1.0</span>
                 <span>3.0</span>
@@ -1429,8 +1436,7 @@ const App: React.FC = () => {
                 <Icons.Save className="w-5 h-5" /> 儲存
               </button>
             </div>
-          </div>
-        </div>
+        </DialogShell>
       )}
 
       {/* Quick Water Modal */}
@@ -1441,20 +1447,20 @@ const App: React.FC = () => {
       />
 
       {/* Tab Navigation */}
-      <div className="flex bg-neutral-900 border-b border-neutral-800 sticky top-[calc(55px+env(safe-area-inset-top))] z-40 shadow-sm">
-        <button onClick={() => setActiveTab('daily')} className={`flex-1 py-4 text-base font-medium flex justify-center gap-2 ${activeTab === 'daily' ? 'text-teal-400 border-b-2 border-teal-400' : 'text-neutral-500'}`}><Icons.Zap /> 今日儀表板</button>
-        <button onClick={() => setActiveTab('weight')} className={`flex-1 py-4 text-base font-medium flex justify-center gap-2 ${activeTab === 'weight' ? 'text-teal-400 border-b-2 border-teal-400' : 'text-neutral-500'}`}><Icons.TrendingDown /> 體重與劑量</button>
-      </div>
+      <nav aria-label="主要功能" className="flex bg-neutral-900 border-b border-neutral-800 sticky top-[calc(68px+env(safe-area-inset-top))] z-40 shadow-sm">
+        <button aria-current={activeTab === 'daily' ? 'page' : undefined} onClick={() => setActiveTab('daily')} className={`flex-1 min-h-[56px] py-4 text-base font-medium flex justify-center gap-2 ${activeTab === 'daily' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-neutral-300'}`}><Icons.Zap /> 今日儀表板</button>
+        <button aria-current={activeTab === 'weight' ? 'page' : undefined} onClick={() => setActiveTab('weight')} className={`flex-1 min-h-[56px] py-4 text-base font-medium flex justify-center gap-2 ${activeTab === 'weight' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-neutral-300'}`}><Icons.TrendingDown /> 體重與劑量</button>
+      </nav>
 
-      <div className="p-4 space-y-6">
+      <main className="p-4 space-y-6">
         {activeTab === 'daily' && (
           <>
             {isViewingHistory && (
               <div className="bg-yellow-900/30 border border-yellow-700 p-3 rounded-xl flex justify-between items-center relative mb-6">
                 <span className="text-yellow-400 text-sm font-bold flex items-center gap-2"><Icons.History className="w-4 h-4" /> 正在檢視歷史紀錄：{currentViewDate}</span>
                 <div className="flex gap-2">
-                  <button onClick={() => setCurrentViewDate(today)} className="bg-neutral-800 text-neutral-400 hover:text-white p-1.5 rounded-lg"><Icons.X className="w-4 h-4" /></button>
-                  <button onClick={() => setCurrentViewDate(today)} className="bg-yellow-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold">回到今日</button>
+                  <button aria-label="關閉歷史日期檢視" onClick={() => setCurrentViewDate(today)} className="bg-neutral-800 text-neutral-300 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg"><Icons.X className="w-4 h-4" /></button>
+                  <button onClick={() => setCurrentViewDate(today)} className="bg-yellow-600 text-white text-sm min-h-[44px] px-3 py-2 rounded-lg font-bold">回到今日</button>
                 </div>
               </div>
             )}
@@ -1564,10 +1570,10 @@ const App: React.FC = () => {
               <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
                 <h2 className="font-bold text-neutral-300 text-base flex items-center gap-2"><Icons.TrendingUp /> 熱量趨勢</h2>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => openTargetModal('activity')} className="text-xs font-bold text-teal-400 bg-teal-900/30 px-2 py-1.5 rounded-lg border border-teal-800 flex items-center gap-1 hover:bg-teal-900/50 transition-colors">
+                  <button onClick={() => openTargetModal('activity')} className="min-h-[44px] text-sm font-bold text-teal-300 bg-teal-900/30 px-3 py-2 rounded-lg border border-teal-800 flex items-center gap-1 hover:bg-teal-900/50 transition-colors">
                     運動目標: {activityTarget} <Icons.Edit className="w-3 h-3" />
                   </button>
-                  <select value={trendRange} onChange={(e) => setTrendRange(Number(e.target.value))} className="text-sm bg-neutral-800 border-none rounded-lg pl-3 pr-8 py-1.5 text-neutral-300 font-bold outline-none cursor-pointer"><option value={7}>7天</option><option value={14}>14天</option><option value={30}>30天</option><option value={90}>3個月</option><option value={180}>半年</option><option value={365}>一年</option></select>
+                  <select aria-label="熱量趨勢範圍" value={trendRange} onChange={(e) => setTrendRange(Number(e.target.value))} className="min-h-[44px] text-sm bg-neutral-800 border-none rounded-lg pl-3 pr-8 py-2 text-neutral-300 font-bold outline-none cursor-pointer"><option value={7}>7天</option><option value={14}>14天</option><option value={30}>30天</option><option value={90}>3個月</option><option value={180}>半年</option><option value={365}>一年</option></select>
                 </div>
               </div>
               <TrendChart data={trendData} budget={dailyTarget} activityTarget={activityTarget} />
@@ -1606,24 +1612,24 @@ const App: React.FC = () => {
             <div className="mt-8 pb-8">
               <div className="flex items-center justify-between mb-3 pl-1 gap-3">
                 <h3 className="font-bold text-neutral-400 text-sm flex items-center gap-2"><Icons.Calendar className="w-4 h-4" /> 歷史查詢</h3>
-                <button onClick={handleTrainingExport} className="text-xs font-bold text-teal-300 bg-teal-900/30 px-3 py-2 rounded-lg border border-teal-800 flex items-center gap-1 hover:bg-teal-900/50 transition-colors">
+                <button onClick={handleTrainingExport} className="min-h-[44px] text-sm font-bold text-teal-300 bg-teal-900/30 px-3 py-2 rounded-lg border border-teal-800 flex items-center gap-1 hover:bg-teal-900/50 transition-colors">
                   <Icons.Download className="w-3.5 h-3.5" /> 匯出訓練資料
                 </button>
               </div>
               <div className="bg-neutral-900 p-3 rounded-xl border border-neutral-800 overflow-hidden w-full box-border">
-                <button onClick={handleTrainingExport} className="w-full mb-4 bg-teal-600 text-white rounded-xl py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all hover:bg-teal-500">
+                <button onClick={handleTrainingExport} className="w-full min-h-[44px] mb-4 bg-teal-600 text-white rounded-xl py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all hover:bg-teal-500">
                   <Icons.Dumbbell className="w-4 h-4" /> 匯出這段期間的訓練與身體資料
                 </button>
-                <p className="text-[11px] text-neutral-500 mb-4 leading-relaxed">
+                <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
                   會依下方日期範圍匯出體重、體脂、肌肉、內臟脂肪、一般運動、阻力訓練與每日摘要，方便交給 AI 分析。
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 w-full">
-                  <div className="w-full relative"><span className="absolute top-[-8px] left-2 text-[10px] text-neutral-500 bg-neutral-900 px-1 z-20">開始日期</span><div className="relative w-full"><input type="date" value={historyStartDate} onChange={(e) => setHistoryStartDate(e.target.value)} className="w-full min-w-0 bg-transparent text-white border border-neutral-700 rounded-lg p-3 text-sm font-bold outline-none focus:border-teal-500 pr-10 box-border" /><Icons.Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-white w-4 h-4 pointer-events-none" /></div></div>
-                  <div className="w-full relative"><span className="absolute top-[-8px] left-2 text-[10px] text-neutral-500 bg-neutral-900 px-1 z-20">結束日期</span><div className="relative w-full"><input type="date" value={historyEndDate} onChange={(e) => setHistoryEndDate(e.target.value)} className="w-full min-w-0 bg-transparent text-white border border-neutral-700 rounded-lg p-3 text-sm font-bold outline-none focus:border-teal-500 pr-10 box-border" /><Icons.Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-white w-4 h-4 pointer-events-none" /></div></div>
+                  <div className="w-full relative"><label htmlFor="history-start-date" className="absolute top-[-9px] left-2 text-xs text-neutral-400 bg-neutral-900 px-1 z-20">開始日期</label><div className="relative w-full"><input id="history-start-date" type="date" value={historyStartDate} onChange={(e) => setHistoryStartDate(e.target.value)} className="w-full min-w-0 bg-transparent text-white border border-neutral-700 rounded-lg p-3 text-sm font-bold outline-none focus:border-teal-500 pr-10 box-border" /><Icons.Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-white w-4 h-4 pointer-events-none" /></div></div>
+                  <div className="w-full relative"><label htmlFor="history-end-date" className="absolute top-[-9px] left-2 text-xs text-neutral-400 bg-neutral-900 px-1 z-20">結束日期</label><div className="relative w-full"><input id="history-end-date" type="date" value={historyEndDate} onChange={(e) => setHistoryEndDate(e.target.value)} className="w-full min-w-0 bg-transparent text-white border border-neutral-700 rounded-lg p-3 text-sm font-bold outline-none focus:border-teal-500 pr-10 box-border" /><Icons.Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-white w-4 h-4 pointer-events-none" /></div></div>
                 </div>
                 {rangeQueryResults && (
                   <div className="pt-2 border-t border-neutral-800 animate-fadeIn">
-                    <div className="flex justify-between items-end mb-2"><span className="text-xs text-neutral-500 font-bold">區間總結餘 ({rangeQueryResults.validDays}/{rangeQueryResults.totalDaysInRange}天)</span><span className={`text-xl font-extrabold ${rangeQueryResults.netBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>{rangeQueryResults.netBalance > 0 ? '+' : ''}{rangeQueryResults.netBalance} KCAL</span></div>
+                    <div className="flex justify-between items-end mb-2"><span className="text-xs text-neutral-400 font-bold">區間總結餘 ({rangeQueryResults.validDays}/{rangeQueryResults.totalDaysInRange}天)</span><span className={`text-xl font-extrabold ${rangeQueryResults.netBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>{rangeQueryResults.netBalance > 0 ? '+' : ''}{rangeQueryResults.netBalance} KCAL</span></div>
                     <div className="flex gap-4 text-xs font-bold bg-neutral-800/50 p-2 rounded-lg"><span className="text-orange-500">總攝取: {rangeQueryResults.totalIn}</span><span className="text-teal-500">總消耗: {rangeQueryResults.totalOut}</span></div>
                   </div>
                 )}
@@ -1685,7 +1691,7 @@ const App: React.FC = () => {
             />
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 };

@@ -10,13 +10,13 @@
 }
 
 /*
- * Sticky chrome 高度：header (55px) + tab bar (56px) + 瀏海安全區。
- * 55px 這個數字已被 App.tsx 的 tab bar `top-[calc(55px+...)]` 使用，兩者一致。
+ * Sticky chrome 高度：header (68px) + tab bar (56px) + 瀏海安全區。
+ * 68px 由 header 的 44px 觸控高度與上下 12px padding 組成。
  * 任何用 scrollIntoView 捲過去的目標都該掛 .scroll-anchor，
  * 否則會被上方這兩層 sticky 蓋住。
  */
 :root {
-  --sticky-offset: calc(111px + env(safe-area-inset-top));
+  --sticky-offset: calc(124px + env(safe-area-inset-top));
 
   /*
    * sticky 行動按鈕列的底部留白。
@@ -153,9 +153,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /*
- * 減少動態效果：系統層要求時，關掉裝飾性動畫（波浪、fadeIn），
- * 功能性動畫（spin/pulse，表示「正在處理」）保留但放慢，
- * transition 壓到近乎即時，避免前庭敏感使用者不適。
+ * 減少動態效果：系統層要求時，關掉裝飾性動畫與位移／縮放。
+ * 功能性動畫（spin/pulse，表示「正在處理」）保留但放慢。
  */
 @media (prefers-reduced-motion: reduce) {
   .animate-fadeIn,
@@ -168,9 +167,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     animation-duration: 2s !important;
   }
 
-  *,
-  *::before,
-  *::after {
-    transition-duration: 0.01ms !important;
+  .active\:scale-95:active,
+  .active\:scale-90:active,
+  .active\:scale-\[0\.98\]:active {
+    transform: none !important;
   }
 }

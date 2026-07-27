@@ -109,6 +109,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                 <div key={question} className="text-xs text-amber-100">・{question}</div>
               ))}
               <textarea
+                aria-label="補充食物分析資訊"
                 value={clarificationAnswer}
                 onChange={event => setClarificationAnswer(event.target.value)}
                 rows={2}
@@ -133,7 +134,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                   <div key={item.id} className="grid grid-cols-[1fr_92px] gap-3 items-center rounded-lg bg-neutral-900/70 border border-neutral-700 p-3">
                     <div className="min-w-0">
                       <div className="text-sm font-bold text-white break-words">{item.name}</div>
-                      <div className="text-[11px] text-neutral-500 mt-0.5">
+                      <div className="text-xs text-neutral-400 mt-0.5">
                         範圍 {item.grams.low}-{item.grams.high}g · {item.confidence === 'high' ? '高把握' : item.confidence === 'medium' ? '中等把握' : '低把握'}
                       </div>
                       {item.evidence && <div className="text-[11px] text-neutral-400 mt-1">{item.evidence}</div>}
@@ -184,7 +185,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             <label className="font-bold text-neutral-300 text-sm">我實際吃了多少</label>
             <span className="font-bold text-teal-400 text-lg">{Math.round(portion * 100)}%</span>
           </div>
-          <input type="range" min="0.1" max="3" step="0.1" value={portion} onChange={e => setPortion(parseFloat(e.target.value))} className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-teal-500" />
+          <input aria-label="實際食用份量" type="range" min="0.1" max="3" step="0.1" value={portion} onChange={e => setPortion(parseFloat(e.target.value))} className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-teal-500" />
           <div className="grid grid-cols-5 mt-3 pt-3 border-t border-neutral-700 text-center divide-x divide-neutral-700">
             <div><div className="text-[11px] text-neutral-400">熱量</div><div className={`text-base font-bold ${NUTRIENTS.calories.text}`}>{Math.round(analyzedFood.calories * portion)}</div></div>
             <div><div className="text-[11px] text-neutral-400">蛋白</div><div className={`text-base font-bold ${NUTRIENTS.protein.text}`}>{Math.round((analyzedFood.protein || 0) * portion)}</div></div>
@@ -232,7 +233,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             <label className="font-bold text-neutral-300 text-sm">飲用份量/比例</label>
             <span className="font-bold text-teal-400 text-lg">{portion} 份</span>
           </div>
-          <input type="range" min="0.1" max="3" step="0.1" value={portion} onChange={e => setPortion(parseFloat(e.target.value))} className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-teal-500" />
+          <input aria-label="實際飲用份量" type="range" min="0.1" max="3" step="0.1" value={portion} onChange={e => setPortion(parseFloat(e.target.value))} className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-teal-500" />
           <div className="flex justify-between mt-3 pt-3 border-t border-neutral-700 text-center">
             <div className="w-full"><div className="text-xs text-neutral-400">總容量</div><div className="text-base font-bold text-blue-400">{Math.round(analyzedWater.amount * portion)} ml</div></div>
           </div>
@@ -302,12 +303,18 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
       )}
 
       {(analyzedFood || analyzedWater) && (
-        <div className="mb-4 flex items-center gap-2 cursor-pointer" onClick={() => setAddToFavorites(!addToFavorites)}>
-          <div className={`w-5 h-5 rounded border flex items-center justify-center ${addToFavorites ? 'bg-rose-500 border-rose-500' : 'border-neutral-500'}`}>
+        <label className="relative mb-4 flex min-h-[44px] items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={addToFavorites}
+            onChange={event => setAddToFavorites(event.target.checked)}
+            className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 peer"
+          />
+          <span aria-hidden="true" className={`pointer-events-none w-5 h-5 rounded border flex items-center justify-center peer-focus-visible:ring-2 peer-focus-visible:ring-rose-300 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-neutral-900 ${addToFavorites ? 'bg-rose-500 border-rose-500' : 'border-neutral-500'}`}>
             {addToFavorites && <Icons.Check className="w-3.5 h-3.5 text-white" />}
-          </div>
-          <label className="text-sm text-neutral-300 font-bold cursor-pointer select-none">加入常用{analyzedWater ? '容器' : '食物'}</label>
-        </div>
+          </span>
+          <span className="text-sm text-neutral-300 font-bold select-none">加入常用{analyzedWater ? '容器' : '食物'}</span>
+        </label>
       )}
 
       {/*

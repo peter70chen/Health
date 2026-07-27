@@ -1,12 +1,15 @@
 
 import React from 'react';
-import type { DraggableSyntheticListeners } from '@dnd-kit/core';
+import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 interface SortableItemProps {
     id: string;
-    children: React.ReactNode | ((args: { listeners: DraggableSyntheticListeners }) => React.ReactNode);
+    children: React.ReactNode | ((args: {
+        attributes: DraggableAttributes;
+        listeners: DraggableSyntheticListeners;
+    }) => React.ReactNode);
     className?: string;
     onClick?: () => void;
 }
@@ -33,9 +36,8 @@ export const SortableItem: React.FC<SortableItemProps> = ({ id, children, classN
             style={style}
             className={className}
             onClick={onClick}
-            {...attributes}
         >
-            {typeof children === 'function' ? children({ listeners }) : children}
+            {typeof children === 'function' ? children({ attributes, listeners }) : children}
         </div>
     );
 };

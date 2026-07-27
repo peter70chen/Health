@@ -113,16 +113,16 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
 }) => {
   return (
     <div className="bg-neutral-900 rounded-2xl shadow-sm border border-neutral-800 p-6">
-      <div className="flex justify-between items-center mb-4 border-b border-neutral-800 pb-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 mb-4 border-b border-neutral-800 pb-4">
         {/* 左側：環形進度圖。攝取/消耗數字由下方 IN/OUT 卡呈現，這裡不重複 */}
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 flex-col items-center gap-2 min-[380px]:flex-row min-[380px]:gap-4">
           <CircularProgress remaining={remaining} total={dailyTarget} />
-          <div className="text-sm text-neutral-400 font-bold">今日剩餘額度</div>
+          <div className="whitespace-nowrap text-sm text-neutral-300 font-bold">今日剩餘額度</div>
         </div>
         {/* 右側：每日目標 */}
         <div className="text-right flex flex-col items-end">
           <div className="text-xs text-neutral-400">每日可消耗</div>
-          <button onClick={() => openTargetModal('daily')} className="text-sm font-bold text-teal-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 mt-1 border border-neutral-700">
+          <button aria-label={`調整每日可消耗目標，目前 ${dailyTarget} 大卡`} onClick={() => openTargetModal('daily')} className="min-h-[44px] text-sm font-bold text-teal-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 mt-1 border border-neutral-700">
             {dailyTarget} <Icons.Edit className="w-3 h-3" />
           </button>
         </div>

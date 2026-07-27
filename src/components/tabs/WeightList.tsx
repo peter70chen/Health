@@ -14,7 +14,7 @@ export const WeightList: React.FC<WeightListProps> = ({ weightLogs, setConfirmMo
         <div key={l.id} className="bg-neutral-900 px-4 py-3 rounded-xl border border-neutral-800 flex flex-col hover:bg-neutral-800 transition-colors">
           <div className="flex justify-between items-center w-full h-10">
             <div className="flex items-center gap-4">
-              <span className="text-neutral-500 font-bold text-xs w-auto min-w-[5rem] whitespace-nowrap">{l.date}</span>
+              <span className="text-neutral-400 font-bold text-xs w-auto min-w-[5rem] whitespace-nowrap">{l.date}</span>
               <span className="font-extrabold text-white text-lg">{l.weight} kg</span>
             </div>
             <div className="flex items-center gap-3">
@@ -23,7 +23,7 @@ export const WeightList: React.FC<WeightListProps> = ({ weightLogs, setConfirmMo
                   <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>{l.dose} mg
                 </span>
               )}
-              <button onClick={() => setConfirmModal({ id: l.id, type: 'weight' })} className="text-neutral-600 p-1 hover:text-red-500 active:scale-90 transition-transform">
+              <button aria-label={`刪除 ${l.date} 的體重紀錄`} onClick={() => setConfirmModal({ id: l.id, type: 'weight' })} className="text-neutral-400 min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-red-400 active:scale-90 transition-transform">
                 <Icons.Trash className="w-4 h-4" />
               </button>
             </div>
@@ -33,7 +33,7 @@ export const WeightList: React.FC<WeightListProps> = ({ weightLogs, setConfirmMo
             {l.muscle && <span className="text-[10px] font-bold text-blue-300 bg-blue-900/40 px-1.5 py-0.5 rounded-md">肌 {l.muscle}kg</span>}
             {l.visceral && <span className="text-[10px] font-bold text-zinc-300 bg-zinc-700/40 px-1.5 py-0.5 rounded-md">內 {l.visceral}</span>}
           </div>
-          {l.notes && <div className="text-[10px] text-neutral-500 pl-24 truncate pb-1">{l.notes}</div>}
+          {l.notes && <div className="text-xs text-neutral-400 pl-24 truncate pb-1">{l.notes}</div>}
         </div>
       ))}
     </div>

@@ -24,11 +24,11 @@ export const CoachSection: React.FC<CoachSectionProps> = ({
         </h2>
         <div className="flex gap-2 items-center">
           {coachAdvice && (
-            <button onClick={() => setCoachAdvice('')} className="text-teal-600 hover:text-red-500 p-2 rounded transition-colors" title="清除建議">
+            <button aria-label="清除教練建議" onClick={() => setCoachAdvice('')} className="text-teal-300 hover:text-red-400 min-w-[44px] min-h-[44px] flex items-center justify-center rounded transition-colors" title="清除建議">
               <Icons.Trash className="w-5 h-5" />
             </button>
           )}
-          <button onClick={handleAskCoach} disabled={isCoachThinking} className="bg-teal-600 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-md active:scale-95 transition-all disabled:opacity-50 hover:bg-teal-500">
+          <button onClick={handleAskCoach} disabled={isCoachThinking} className="bg-teal-600 min-h-[44px] text-white text-sm font-bold px-4 py-2 rounded-xl shadow-md active:scale-95 transition-all disabled:opacity-50 hover:bg-teal-500">
             {isCoachThinking ? (
               <span className="flex items-center gap-2"><Icons.Loader2 className="animate-spin w-4 h-4" />{coachStatus || "思考中..."}</span>
             ) : '諮詢意見'}

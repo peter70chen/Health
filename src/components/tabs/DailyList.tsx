@@ -59,7 +59,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                       {l.foodName}
                       {l.portion && l.portion !== 1 && <span className="ml-2 text-xs bg-neutral-700 text-neutral-400 px-2 py-0.5 rounded-full">x{l.portion}</span>}
                     </div>
-                    <div className="text-xs text-neutral-500 font-medium mt-0.5 flex flex-wrap gap-x-2">
+                    <div className="text-xs text-neutral-400 font-medium mt-0.5 flex flex-wrap gap-x-2">
                       {(l.amount ?? 0) > 0 && (
                         <span className={l.amountUnit === 'ml' || (!l.amountUnit && l.linkId) ? 'text-blue-400 flex items-center gap-1' : 'text-neutral-400'}>
                           {(l.amountUnit === 'ml' || (!l.amountUnit && l.linkId)) && <Icons.Water className="w-3 h-3" />}
@@ -120,13 +120,13 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     <div className="font-bold text-neutral-200 text-sm">
                       {l.beverageName || '飲水'}
                     </div>
-                    <div className="text-xs text-neutral-500 font-medium mt-0.5 flex flex-wrap gap-x-2">
+                    <div className="text-xs text-neutral-400 font-medium mt-0.5 flex flex-wrap gap-x-2">
                       <span className="text-blue-400 flex items-center gap-1"><Icons.Water className="w-3 h-3" /> {l.amount} ml</span>
                       {(l.calories ?? 0) > 0 && <span>+{l.calories} kcal</span>}
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setConfirmModal({ id: l.id, type: 'water' })} className="text-neutral-500 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <button aria-label="刪除飲水紀錄" onClick={() => setConfirmModal({ id: l.id, type: 'water' })} className="text-neutral-400 hover:text-red-400 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
                   <Icons.Trash className="w-4 h-4" />
                 </button>
               </div>
@@ -167,14 +167,14 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     <div className="font-bold text-neutral-200 text-sm">
                       {l.activityName ? `運動 (${l.activityName})` : '運動'}
                     </div>
-                    <div className="text-xs text-neutral-500 font-medium mt-0.5 flex flex-wrap gap-x-2">
+                    <div className="text-xs text-neutral-400 font-medium mt-0.5 flex flex-wrap gap-x-2">
                       <span>-{l.activeCalories} kcal</span>
                       {(l.exerciseMinutes ?? 0) > 0 && <span>{l.exerciseMinutes} 分鐘</span>}
                       {(l.steps ?? 0) > 0 && <span>{l.steps} 步</span>}
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setConfirmModal({ id: l.id, type: l._source === 'resistance' ? 'resistanceLog' : 'activity' })} className="text-neutral-500 hover:text-red-500 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <button aria-label="刪除運動紀錄" onClick={() => setConfirmModal({ id: l.id, type: l._source === 'resistance' ? 'resistanceLog' : 'activity' })} className="text-neutral-400 hover:text-red-400 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center">
                   <Icons.Trash className="w-4 h-4" />
                 </button>
               </div>
