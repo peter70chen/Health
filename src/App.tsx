@@ -1308,7 +1308,7 @@ const App: React.FC = () => {
   const editingFoodBase = editingFood ? getFoodBaseValues(editingFood) : null;
 
   return (
-    <div className="pb-32 max-w-md mx-auto min-h-screen relative bg-black">
+    <div className="pb-[calc(6.5rem+env(safe-area-inset-bottom))] max-w-md mx-auto min-h-screen relative bg-black">
       {/*
        * 常駐的 live region。必須「先存在於 DOM，之後才變更內容」，
        * 螢幕閱讀器才會播報 —— 若把 role="status" 掛在條件渲染的 toast 上，
@@ -1328,12 +1328,12 @@ const App: React.FC = () => {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 bg-neutral-900 z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 flex justify-between items-center shadow-md border-b border-neutral-800">
-        <h1 className="text-lg min-[360px]:text-xl font-bold text-teal-400 flex items-center gap-2 whitespace-nowrap shrink-0"><Icons.Activity /> Health Plan <span className="hidden min-[380px]:inline text-xs text-neutral-400 font-normal mt-1">{APP_DISPLAY_VERSION}</span></h1>
-        <div className="flex gap-2">
-          <button aria-label="開啟設定" onClick={() => setShowSettings(!showSettings)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-300 ${hasAnyKey ? 'text-teal-300' : 'text-neutral-300'}`}><Icons.Settings /><span className="text-[10px] font-bold max-[340px]:sr-only">SETTING</span></button>
-          <button aria-label="資料健康檢查" onClick={() => setShowDataHealth(true)} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] hover:text-teal-300 ${dataHealthIssues.length > 0 ? 'text-amber-300' : 'text-neutral-300'}`}><Icons.ScanEye /><span className="text-[10px] font-bold max-[340px]:sr-only">CHECK</span></button>
-          <button aria-label="匯出訓練資料" onClick={handleTrainingExport} className="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] text-teal-300 hover:text-teal-200"><Icons.Dumbbell className="w-5 h-5" /><span className="text-[10px] font-bold max-[340px]:sr-only">TRAIN</span></button>
+      <header className="sticky top-0 bg-neutral-950/95 backdrop-blur z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 flex justify-between items-center border-b border-neutral-800">
+        <h1 className="text-lg min-[360px]:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0"><Icons.Activity className="w-5 h-5 text-teal-400" /> Health Plan <span className="hidden min-[390px]:inline text-xs text-neutral-500 font-normal">{APP_DISPLAY_VERSION}</span></h1>
+        <div className="flex gap-1">
+          <button title="設定" aria-label="開啟設定" onClick={() => setShowSettings(!showSettings)} className={`flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-neutral-800 hover:text-teal-300 ${hasAnyKey ? 'text-teal-300' : 'text-neutral-300'}`}><Icons.Settings /></button>
+          <button title="資料健康檢查" aria-label="資料健康檢查" onClick={() => setShowDataHealth(true)} className={`relative flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-neutral-800 hover:text-teal-300 ${dataHealthIssues.length > 0 ? 'text-amber-300' : 'text-neutral-300'}`}><Icons.ScanEye />{dataHealthIssues.length > 0 && <span aria-hidden="true" className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400" />}</button>
+          <button title="匯出訓練資料" aria-label="匯出訓練資料" onClick={handleTrainingExport} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-teal-300"><Icons.Download className="w-5 h-5" /></button>
         </div>
       </header>
 
@@ -1446,13 +1446,7 @@ const App: React.FC = () => {
         onConfirm={confirmQuickWater}
       />
 
-      {/* Tab Navigation */}
-      <nav aria-label="主要功能" className="flex bg-neutral-900 border-b border-neutral-800 sticky top-[calc(68px+env(safe-area-inset-top))] z-40 shadow-sm">
-        <button aria-current={activeTab === 'daily' ? 'page' : undefined} onClick={() => setActiveTab('daily')} className={`flex-1 min-h-[56px] py-4 text-base font-medium flex justify-center gap-2 ${activeTab === 'daily' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-neutral-300'}`}><Icons.Zap /> 今日儀表板</button>
-        <button aria-current={activeTab === 'weight' ? 'page' : undefined} onClick={() => setActiveTab('weight')} className={`flex-1 min-h-[56px] py-4 text-base font-medium flex justify-center gap-2 ${activeTab === 'weight' ? 'text-teal-300 border-b-2 border-teal-400' : 'text-neutral-300'}`}><Icons.TrendingDown /> 體重與劑量</button>
-      </nav>
-
-      <main className="p-4 space-y-6">
+      <main className="p-4 space-y-5">
         {activeTab === 'daily' && (
           <>
             {isViewingHistory && (
@@ -1566,7 +1560,7 @@ const App: React.FC = () => {
             <DailyList foodList={dailyFoodList} waterList={dailyWaterList} activityList={dailyActivityList} setConfirmModal={setConfirmModal} onEditFoodPortion={openFoodPortionEditor} />
 
             {/* Trend Chart */}
-            <div className="bg-neutral-900 rounded-2xl shadow-sm border border-neutral-800 p-5 mt-8">
+            <div className="bg-neutral-900 rounded-lg border border-neutral-800 p-4 mt-8">
               <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
                 <h2 className="font-bold text-neutral-300 text-base flex items-center gap-2"><Icons.TrendingUp /> 熱量趨勢</h2>
                 <div className="flex items-center gap-2">
@@ -1650,10 +1644,10 @@ const App: React.FC = () => {
         {activeTab === 'weight' && (
           <>
             <WeightStats currentWeight={currentWeight} bmi={bmi} />
-            <div className="bg-neutral-900 rounded-2xl shadow-sm border border-neutral-800 p-6">
+            <div className="bg-neutral-900 rounded-lg border border-neutral-800 p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-neutral-300 text-base">體重與體脂追蹤</h2>
-                <select value={weightRange} onChange={(e) => setWeightRange(Number(e.target.value))} className="text-sm bg-neutral-800 border-none rounded-lg pl-3 pr-10 py-2 text-neutral-300 font-bold outline-none cursor-pointer">
+                <select aria-label="體重趨勢範圍" value={weightRange} onChange={(e) => setWeightRange(Number(e.target.value))} className="min-h-[44px] text-sm bg-neutral-800 border-none rounded-lg pl-3 pr-10 py-2 text-neutral-300 font-bold outline-none cursor-pointer">
                   <option value={7}>7天</option>
                   <option value={14}>14天</option>
                   <option value={30}>30天</option>
@@ -1692,6 +1686,11 @@ const App: React.FC = () => {
           </>
         )}
       </main>
+
+      <nav aria-label="主要功能" className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-md grid grid-cols-2 bg-neutral-950/95 backdrop-blur border-t border-neutral-700 px-2 pt-1 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] shadow-[0_-8px_24px_rgba(0,0,0,0.35)]">
+        <button aria-current={activeTab === 'daily' ? 'page' : undefined} onClick={() => setActiveTab('daily')} className={`relative min-h-[56px] rounded-lg text-sm font-bold flex flex-col items-center justify-center gap-0.5 ${activeTab === 'daily' ? 'text-teal-300 bg-teal-950/50' : 'text-neutral-400 hover:text-neutral-200'}`}><Icons.Zap className="w-5 h-5" /> 今日{activeTab === 'daily' && <span aria-hidden="true" className="absolute bottom-0.5 w-5 h-0.5 rounded-full bg-teal-400" />}</button>
+        <button aria-current={activeTab === 'weight' ? 'page' : undefined} onClick={() => setActiveTab('weight')} className={`relative min-h-[56px] rounded-lg text-sm font-bold flex flex-col items-center justify-center gap-0.5 ${activeTab === 'weight' ? 'text-teal-300 bg-teal-950/50' : 'text-neutral-400 hover:text-neutral-200'}`}><Icons.TrendingDown className="w-5 h-5" /> 體重與劑量{activeTab === 'weight' && <span aria-hidden="true" className="absolute bottom-0.5 w-5 h-0.5 rounded-full bg-teal-400" />}</button>
+      </nav>
     </div>
   );
 };

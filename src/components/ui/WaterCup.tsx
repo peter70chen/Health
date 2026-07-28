@@ -87,8 +87,8 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
                     <span className="text-xs font-medium text-neutral-400">/ {target} ml</span>
                 </div>
                 {isReached && (
-                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-900/40 px-2 py-0.5 rounded-full w-fit">
-                        ✨ 目標達成
+                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-900/40 px-2 py-0.5 rounded w-fit">
+                        <Icons.Check className="w-3 h-3" /> 目標達成
                     </div>
                 )}
             </div>

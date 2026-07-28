@@ -19,26 +19,23 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data, budget, activityTa
     const getY = (val: number) => 100 - ((val / maxVal) * 100);
 
     let linePath = "";
-    let areaPath = `M 0 100 `;
 
     if (isSingle) {
         const x = 50;
         const y = getY(data[0].in || 0);
         linePath = `M ${x - 10} ${y} L ${x + 10} ${y}`;
-        areaPath = `M ${x - 10} 100 L ${x - 10} ${y} L ${x + 10} ${y} L ${x + 10} 100 Z`;
     } else {
         data.forEach((d, i) => {
             const x = getX(i);
             const y = getY(d.in || 0);
             linePath += `${i === 0 ? 'M' : 'L'} ${x} ${y} `;
-            areaPath += `L ${x} ${y} `;
         });
-        areaPath += `L 100 100 Z`;
     }
 
     const isLongRange = data.length > 30;
     const barWidth = isSingle ? 20 : (100 / data.length / 1.5);
     const labelStep = Math.ceil(data.length / 6);
+    const plotHeightRatio = 100 / 115;
 
     const chartLabels = data.map((d, i) => {
         const isLabelStep = i % labelStep === 0;
@@ -67,14 +64,13 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data, budget, activityTa
 
     return (
         <div className="w-full h-64 relative border-l border-neutral-700 mt-4">
-            <svg className="w-full h-full absolute inset-0" viewBox="0 0 100 115" preserveAspectRatio="none">
-                <defs>
-                    <linearGradient id="orangeGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
-                        <stop offset="100%" stopColor="#f97316" stopOpacity="0.0" />
-                    </linearGradient>
-                </defs>
-
+            <svg
+                role="img"
+                aria-label={`${data.length} 天熱量趨勢，橘線為攝取、青色柱為消耗`}
+                className="w-full h-full absolute inset-0"
+                viewBox="0 0 100 115"
+                preserveAspectRatio="none"
+            >
                 {/* Grid lines */}
                 {[0, 25, 50, 75, 100].map(y => (
                     <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="#262626" strokeWidth="0.5" />
@@ -100,8 +96,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data, budget, activityTa
                     )
                 ))}
 
-                {/* Area and line */}
-                <path d={areaPath} fill="url(#orangeGradient)" stroke="none" />
+                {/* Intake line */}
                 <path d={linePath} fill="none" stroke="#f97316" strokeWidth={isLongRange ? 1 : 1.5} strokeLinecap="round" strokeLinejoin="round" />
 
                 {/* Labels */}
@@ -115,7 +110,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data, budget, activityTa
                     className="absolute w-2 h-2 bg-white border-2 border-orange-500 rounded-full"
                     style={{
                         left: `${getX(i)}%`,
-                        top: `${getY(d.in || 0) * 0.87}%`,
+                        top: `${getY(d.in || 0) * plotHeightRatio}%`,
                         transform: 'translate(-50%, -50%)'
                     }}
                 />

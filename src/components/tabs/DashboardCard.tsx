@@ -19,8 +19,8 @@ interface DashboardCardProps {
 
 // 環形進度圖元件
 const CircularProgress: React.FC<{ remaining: number; total: number }> = ({ remaining, total }) => {
-  const size = 120;
-  const strokeWidth = 10;
+  const size = 108;
+  const strokeWidth = 9;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -38,7 +38,7 @@ const CircularProgress: React.FC<{ remaining: number; total: number }> = ({ rema
   };
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="transform -rotate-90">
         {/* 背景圓環 */}
         <circle
@@ -70,7 +70,7 @@ const CircularProgress: React.FC<{ remaining: number; total: number }> = ({ rema
        * 超標是這個 app 的常態情境，所以維持 text-2xl / font-extrabold。
        */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className={`text-2xl font-extrabold ${remaining < 0 ? 'text-red-500' : 'text-white'}`}>
+        <div className={`text-2xl font-extrabold tabular-nums ${remaining < 0 ? 'text-red-400' : 'text-white'}`}>
           {remaining}
         </div>
         <div className="text-[10px] text-neutral-400 font-bold">KCAL</div>
@@ -112,32 +112,32 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
   onQuickAddWater
 }) => {
   return (
-    <div className="bg-neutral-900 rounded-2xl shadow-sm border border-neutral-800 p-6">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 mb-4 border-b border-neutral-800 pb-4">
-        {/* 左側：環形進度圖。攝取/消耗數字由下方 IN/OUT 卡呈現，這裡不重複 */}
-        <div className="flex min-w-0 flex-col items-center gap-2 min-[380px]:flex-row min-[380px]:gap-4">
-          <CircularProgress remaining={remaining} total={dailyTarget} />
-          <div className="whitespace-nowrap text-sm text-neutral-300 font-bold">今日剩餘額度</div>
+    <section aria-labelledby="daily-summary-title" className="bg-neutral-900 rounded-lg border border-neutral-800 p-4">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <p className="text-xs font-bold text-teal-400 mb-0.5">今日摘要</p>
+          <h2 id="daily-summary-title" className="text-base font-bold text-white">剩餘熱量</h2>
         </div>
-        {/* 右側：每日目標 */}
-        <div className="text-right flex flex-col items-end">
-          <div className="text-xs text-neutral-400">每日可消耗</div>
-          <button aria-label={`調整每日可消耗目標，目前 ${dailyTarget} 大卡`} onClick={() => openTargetModal('daily')} className="min-h-[44px] text-sm font-bold text-teal-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 mt-1 border border-neutral-700">
-            {dailyTarget} <Icons.Edit className="w-3 h-3" />
+        <button aria-label={`調整每日可消耗目標，目前 ${dailyTarget} 大卡`} onClick={() => openTargetModal('daily')} className="min-h-[44px] text-sm font-bold text-neutral-200 hover:text-white bg-neutral-800 hover:bg-neutral-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 border border-neutral-700">
+            目標 {dailyTarget} <Icons.Edit className="w-3.5 h-3.5 text-teal-300" />
           </button>
+      </div>
+      <div className="flex items-center gap-4 pb-4 border-b border-neutral-800">
+        <CircularProgress remaining={remaining} total={dailyTarget} />
+        <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <div className="text-xs text-neutral-400 font-medium">攝取 IN</div>
+              <div className="flex items-baseline gap-1"><div className="text-xl font-bold text-orange-400 tabular-nums">+{dailyFood.cal}</div><span className="text-xs text-neutral-500">kcal</span></div>
+            </div>
+            <div>
+              <div className="text-xs text-neutral-400 font-medium">消耗 OUT</div>
+              <div className="flex items-baseline gap-1"><div className="text-xl font-bold text-teal-300 tabular-nums">-{dailyAct.cal + dailyRes.cal}</div><span className="text-xs text-neutral-500">kcal</span></div>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 text-center">
-        <div className="bg-orange-900/20 rounded-xl p-3 border border-orange-900/30">
-          <div className="text-sm text-orange-400 mb-1 font-bold">攝取 IN</div>
-          <div className="text-2xl font-bold text-orange-500">{dailyFood.cal}</div>
-        </div>
-        <div className="bg-teal-900/20 rounded-xl p-3 border border-teal-900/30 relative group">
-          <div className="text-sm text-teal-400 mb-1 font-bold">消耗 OUT</div>
-          <div className="text-2xl font-bold text-teal-500">-{dailyAct.cal + dailyRes.cal}</div>
-        </div>
-      </div>
-      <div className="mt-4 mb-4">
+      <div className="mt-3">
         <WaterCup
           current={dailyWater}
           target={waterTarget}
@@ -145,12 +145,12 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
           onLongPress={onQuickAddWater}
         />
       </div>
-      <div className="mt-5 space-y-2.5">
+      <div className="mt-4 pt-4 border-t border-neutral-800 space-y-3">
         <MacroBar nutrient={NUTRIENTS.protein} current={dailyFood.pro} target={CONFIG.PRO_TARGET} />
         <MacroBar nutrient={NUTRIENTS.carbs} current={dailyFood.carbs} target={CONFIG.CARB_TARGET} />
         <MacroBar nutrient={NUTRIENTS.fat} current={dailyFood.fat} target={CONFIG.FAT_TARGET} />
         <MacroBar nutrient={NUTRIENTS.fiber} current={dailyFood.fib} target={CONFIG.FIBER_TARGET} />
       </div>
-    </div>
+    </section>
   );
 };

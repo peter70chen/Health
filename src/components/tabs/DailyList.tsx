@@ -12,8 +12,6 @@ interface DailyListProps {
 }
 
 export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activityList, setConfirmModal, onEditFoodPortion }) => {
-  const hasAnyRecords = foodList.length > 0 || waterList.length > 0 || activityList.length > 0;
-
   // 收合狀態管理 - 預設收合
   const [isFoodExpanded, setIsFoodExpanded] = useState(false);
   const [isWaterExpanded, setIsWaterExpanded] = useState(false);
@@ -27,7 +25,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
   return (
     <div className="space-y-4">
       {/* Food Section */}
-      <div className="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
+      <div className="bg-neutral-900 rounded-lg border border-neutral-800 overflow-hidden">
         <button
           onClick={() => setIsFoodExpanded(!isFoodExpanded)}
           aria-expanded={isFoodExpanded}
@@ -49,12 +47,12 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
         {isFoodExpanded && (
           <div className="px-4 pb-4 space-y-2 border-t border-neutral-800">
             {foodList.length > 0 ? foodList.map(l => (
-              <div key={l.id} className="bg-neutral-800/50 p-3 rounded-lg flex justify-between items-center mt-2">
-                <div className="flex items-center gap-3">
+              <div key={l.id} className="bg-neutral-800/50 p-3 rounded-lg flex justify-between items-center gap-1 mt-2">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="p-2 rounded-lg bg-orange-900/20 text-orange-500">
                     <Icons.Utensils className="w-4 h-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-bold text-neutral-200 text-sm">
                       {l.foodName}
                       {l.portion && l.portion !== 1 && <span className="ml-2 text-xs bg-neutral-700 text-neutral-400 px-2 py-0.5 rounded-full">x{l.portion}</span>}
@@ -74,7 +72,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   <button onClick={() => onEditFoodPortion(l)} className="text-neutral-400 hover:text-teal-400 active:scale-90 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="調整份量">
                     <Icons.Edit className="w-4 h-4" />
                   </button>
@@ -89,7 +87,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
       </div>
 
       {/* Water Section */}
-      <div className="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
+      <div className="bg-neutral-900 rounded-lg border border-neutral-800 overflow-hidden">
         <button
           onClick={() => setIsWaterExpanded(!isWaterExpanded)}
           aria-expanded={isWaterExpanded}
@@ -111,12 +109,12 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
         {isWaterExpanded && (
           <div className="px-4 pb-4 space-y-2 border-t border-neutral-800">
             {waterList.length > 0 ? waterList.map(l => (
-              <div key={l.id} className="bg-neutral-800/50 p-3 rounded-lg flex justify-between items-center mt-2">
-                <div className="flex items-center gap-3">
+              <div key={l.id} className="bg-neutral-800/50 p-3 rounded-lg flex justify-between items-center gap-1 mt-2">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="p-2 rounded-lg bg-blue-900/20 text-blue-500">
                     <Icons.Water className="w-4 h-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-bold text-neutral-200 text-sm">
                       {l.beverageName || '飲水'}
                     </div>
@@ -136,7 +134,7 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
       </div>
 
       {/* Activity Section */}
-      <div className="bg-neutral-900 rounded-xl border border-neutral-800 overflow-hidden">
+      <div className="bg-neutral-900 rounded-lg border border-neutral-800 overflow-hidden">
         <button
           onClick={() => setIsActivityExpanded(!isActivityExpanded)}
           aria-expanded={isActivityExpanded}
@@ -158,12 +156,12 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
         {isActivityExpanded && (
           <div className="px-4 pb-4 space-y-2 border-t border-neutral-800">
             {activityList.length > 0 ? activityList.map(l => (
-              <div key={l.id} className="bg-neutral-800/50 p-3 rounded-lg flex justify-between items-center mt-2">
-                <div className="flex items-center gap-3">
+              <div key={l.id} className="bg-neutral-800/50 p-3 rounded-lg flex justify-between items-center gap-1 mt-2">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="p-2 rounded-lg bg-teal-900/20 text-teal-500">
                     <Icons.Zap className="w-4 h-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-bold text-neutral-200 text-sm">
                       {l.activityName ? `運動 (${l.activityName})` : '運動'}
                     </div>
@@ -182,13 +180,6 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
           </div>
         )}
       </div>
-
-      {/* Empty state for all */}
-      {!hasAnyRecords && (
-        <div className="text-center py-10 text-neutral-400 text-sm">
-          今天還沒有任何記錄喔！<br />點擊上方按鈕開始記錄吧 ✨
-        </div>
-      )}
     </div>
   );
 };
