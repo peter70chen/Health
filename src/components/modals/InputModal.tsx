@@ -280,7 +280,7 @@ export const InputModal: React.FC<InputModalProps> = ({
       <DialogShell
         labelledBy="input-dialog-title"
         onClose={() => setInputModalType(null)}
-        overlayClassName="bg-black/80 z-50 flex items-end sm:items-center justify-center p-4"
+        overlayClassName="bg-black/80 z-[70] flex items-end sm:items-center justify-center p-4"
         panelClassName="bg-neutral-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-5 mb-6 sm:mb-0 border border-neutral-800 max-h-[85dvh] overflow-y-auto"
       >
           <div className="flex justify-between border-b border-neutral-800 pb-3 items-center">

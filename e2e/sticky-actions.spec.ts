@@ -219,3 +219,52 @@ test('小螢幕記錄阻力運動時，計算按鈕不會被底部導覽遮住',
     '開始計算並儲存',
   ]);
 });
+
+test('飲水常用項目很長時，清單仍位於底部導覽上方且最後一項可操作', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    const containers = Array.from({ length: 10 }, (_, index) => ({
+      id: index + 1,
+      beverageName: index === 9 ? '測試保溫杯' : `常用飲品 ${index + 1}`,
+      amount: 300 + index * 10,
+      calories: index * 5,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+    }));
+    localStorage.setItem('mj_favoriteWaterContainers', JSON.stringify(containers));
+  });
+  await page.goto(BASE_URL);
+
+  await page.getByRole('button', { name: '記錄飲水', exact: true }).click();
+  await page.getByRole('button', { name: '常用', exact: true }).click();
+
+  const dialog = page.getByRole('dialog');
+  const overlayZIndex = await dialog.evaluate((element) => (
+    Number(getComputedStyle(element.parentElement!).zIndex)
+  ));
+  expect(overlayZIndex).toBeGreaterThan(50);
+  await expect(page.locator('nav[aria-label="主要功能"]')).toHaveCount(0);
+
+  const lastContainer = page.locator('button').filter({ hasText: '測試保溫杯' });
+  await lastContainer.scrollIntoViewIfNeeded();
+  await expect(lastContainer).toBeInViewport();
+
+  const [dialogBox, containerBox] = await Promise.all([
+    dialog.boundingBox(),
+    lastContainer.boundingBox(),
+  ]);
+  expect(dialogBox).not.toBeNull();
+  expect(containerBox).not.toBeNull();
+  expect(containerBox!.y + containerBox!.height).toBeLessThanOrEqual(
+    dialogBox!.y + dialogBox!.height
+  );
+
+  const hitTarget = await page.evaluate(({ x, y }) => (
+    document.elementFromPoint(x, y)?.closest('button')?.textContent?.trim() ?? ''
+  ), {
+    x: containerBox!.x + containerBox!.width / 2,
+    y: containerBox!.y + containerBox!.height * 0.9,
+  });
+  expect(hitTarget).toContain('測試保溫杯');
+});
