@@ -176,3 +176,46 @@ test('易讀字級在 320px 手機仍可完成首頁、體重與飲食記錄操�
   expect(await hasHorizontalOverflow()).toBe(false);
   await expect(page.getByRole('button', { name: '拍照 / 上傳圖片' })).toBeVisible();
 });
+
+test('小螢幕記錄阻力運動時，計算按鈕不會被底部導覽遮住', async ({ page }) => {
+  const compactPhone = { width: 320, height: 568 };
+  await page.setViewportSize(compactPhone);
+  await page.addInitScript(() => {
+    localStorage.setItem('mj_resistanceDefs', JSON.stringify([
+      { id: 101, name: '啞鈴彎舉' },
+    ]));
+  });
+  await page.goto(BASE_URL);
+
+  await page.getByRole('button', { name: '記錄運動' }).click();
+  await page.getByRole('button', { name: '阻力', exact: true }).click();
+  await page.getByRole('checkbox', { name: '啞鈴彎舉' }).check();
+
+  await expect(page.locator('nav[aria-label="主要功能"]')).toHaveCount(0);
+
+  const calculateButton = page.getByRole('button', { name: '開始計算並儲存' });
+  await calculateButton.scrollIntoViewIfNeeded();
+  await expect(calculateButton).toBeInViewport();
+
+  const box = await calculateButton.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.y + box!.height).toBeLessThanOrEqual(compactPhone.height);
+
+  const hitTargets = await page.evaluate(({ xPositions, y }) => (
+    xPositions.map((x) => (
+      document.elementFromPoint(x, y)?.closest('button')?.textContent?.trim() ?? ''
+    ))
+  ), {
+    xPositions: [
+      box!.x + box!.width * 0.2,
+      box!.x + box!.width * 0.5,
+      box!.x + box!.width * 0.8,
+    ],
+    y: box!.y + box!.height * 0.9,
+  });
+  expect(hitTargets).toEqual([
+    '開始計算並儲存',
+    '開始計算並儲存',
+    '開始計算並儲存',
+  ]);
+});

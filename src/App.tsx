@@ -1687,7 +1687,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {!hasAnalysisResult && (
+      {!hasAnalysisResult && !inputModalType && (
         <nav aria-label="主要功能" className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-md grid grid-cols-2 bg-neutral-950/95 backdrop-blur border-t border-neutral-700 px-2 pt-1 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] shadow-[0_-8px_24px_rgba(0,0,0,0.35)]">
           <button aria-current={activeTab === 'daily' ? 'page' : undefined} onClick={() => setActiveTab('daily')} className={`relative min-h-[60px] rounded-lg text-sm font-bold flex flex-col items-center justify-center gap-0.5 ${activeTab === 'daily' ? 'text-teal-300 bg-teal-950/50' : 'text-neutral-400 hover:text-neutral-200'}`}><Icons.Zap className="w-5 h-5" /> 今日{activeTab === 'daily' && <span aria-hidden="true" className="absolute bottom-0.5 w-5 h-0.5 rounded-full bg-teal-400" />}</button>
           <button aria-current={activeTab === 'weight' ? 'page' : undefined} onClick={() => setActiveTab('weight')} className={`relative min-h-[60px] rounded-lg text-sm font-bold flex flex-col items-center justify-center gap-0.5 ${activeTab === 'weight' ? 'text-teal-300 bg-teal-950/50' : 'text-neutral-400 hover:text-neutral-200'}`}><Icons.TrendingDown className="w-5 h-5" /> 體重與劑量{activeTab === 'weight' && <span aria-hidden="true" className="absolute bottom-0.5 w-5 h-0.5 rounded-full bg-teal-400" />}</button>
