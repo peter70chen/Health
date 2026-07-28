@@ -61,7 +61,7 @@ export const WeightChart: React.FC<WeightChartProps> = ({ data, targetWeight }) 
                 key={i}
                 x={getX(i)}
                 y="112"
-                fontSize="4"
+                fontSize="4.5"
                 fontWeight="500"
                 textAnchor={anchor as "start" | "middle" | "end"}
                 fill="#737373"
@@ -103,7 +103,7 @@ export const WeightChart: React.FC<WeightChartProps> = ({ data, targetWeight }) 
                             <text
                                 x={getX(i)}
                                 y={getY_W(d.weight) - 6}
-                                fontSize="3"
+                                fontSize="3.5"
                                 fontWeight="bold"
                                 textAnchor="middle"
                                 fill="#2dd4bf"
@@ -116,7 +116,7 @@ export const WeightChart: React.FC<WeightChartProps> = ({ data, targetWeight }) 
                             <text
                                 x={getX(i)}
                                 y={getY_F(d.bodyFat) + 8}
-                                fontSize="3"
+                                fontSize="3.5"
                                 fontWeight="bold"
                                 textAnchor="middle"
                                 fill="#fb7185"

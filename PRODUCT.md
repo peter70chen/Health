@@ -6,7 +6,7 @@ product
 
 ## Users
 
-This is a personal health tracker used primarily by Peter on an iPhone. It is opened many times a day, often one-handed, to record food, water, exercise, resistance training, weight, body composition, medication dose, and symptoms.
+This is a personal health tracker used primarily by Peter on an iPhone. It is opened many times a day, often one-handed, to record food, water, exercise, resistance training, weight, body composition, medication dose, and symptoms. Peter has presbyopia, so readable text takes priority over maximum information density.
 
 ## Product Purpose
 
@@ -34,4 +34,4 @@ Calm, precise, encouraging. The interface should feel like a trustworthy persona
 
 ## Accessibility & Inclusion
 
-Target WCAG 2.2 AA. Keep touch targets near or above 44 by 44 CSS pixels, allow browser zoom and text scaling, support reduced motion, maintain keyboard and screen-reader operation, and never rely on color alone to communicate state.
+Target WCAG 2.2 AA. Keep compact supporting text at least 14px and frequently used labels or body text at least 16px. Keep touch targets near or above 44 by 44 CSS pixels, allow browser zoom and text scaling, support reduced motion, maintain keyboard and screen-reader operation, and never rely on color alone to communicate state.

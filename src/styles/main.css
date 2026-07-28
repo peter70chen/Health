@@ -9,14 +9,21 @@
   box-sizing: border-box;
 }
 
-/*
- * Sticky chrome 高度：header (68px) + tab bar (56px) + 瀏海安全區。
- * 68px 由 header 的 44px 觸控高度與上下 12px padding 組成。
- * 任何用 scrollIntoView 捲過去的目標都該掛 .scroll-anchor，
- * 否則會被上方這兩層 sticky 蓋住。
- */
 :root {
-  --sticky-offset: calc(124px + env(safe-area-inset-top));
+  /* Header 高度加上瀏海安全區；分析結果自動捲動時不可被頂部列遮住。 */
+  --sticky-offset: calc(4.25rem + env(safe-area-inset-top));
+
+  /* 易讀字級：全站比 Tailwind 預設級距提高一級。 */
+  --font-caption: 0.75rem;
+  --font-caption-lg: 0.8125rem;
+  --font-label: 0.875rem;
+  --font-body-sm: 1rem;
+  --font-body: 1.125rem;
+  --font-title-sm: 1.25rem;
+  --font-title: 1.5rem;
+  --font-heading: 1.875rem;
+  --font-display-sm: 2.25rem;
+  --font-display: 3rem;
 
   /*
    * sticky 行動按鈕列的底部留白。
@@ -70,6 +77,67 @@ body {
   overscroll-behavior-y: none;
   /* 等寬數字：熱量/體重跳動時不會因字寬變化而抖動 */
   font-variant-numeric: tabular-nums;
+  -webkit-text-size-adjust: 100%;
+}
+
+/*
+ * Health Plan 主要在手機上使用，預設 Tailwind 的 12/14px 對老花眼過小。
+ * 只放大字級與行高，不連帶放大 padding/gap，避免 320px 手機被整體 rem 縮放擠破。
+ */
+.text-\[10px\] {
+  font-size: var(--font-caption);
+  line-height: 1rem;
+}
+
+.text-\[11px\] {
+  font-size: var(--font-caption-lg);
+  line-height: 1.125rem;
+}
+
+.text-xs {
+  font-size: var(--font-label);
+  line-height: 1.25rem;
+}
+
+.text-sm {
+  font-size: var(--font-body-sm);
+  line-height: 1.5rem;
+}
+
+.text-base {
+  font-size: var(--font-body);
+  line-height: 1.625rem;
+}
+
+.text-lg {
+  font-size: var(--font-title-sm);
+  line-height: 1.75rem;
+}
+
+.text-xl {
+  font-size: var(--font-title);
+  line-height: 2rem;
+}
+
+.text-2xl {
+  font-size: var(--font-heading);
+  line-height: 2.25rem;
+}
+
+.text-3xl {
+  font-size: var(--font-display-sm);
+  line-height: 2.5rem;
+}
+
+.text-4xl {
+  font-size: var(--font-display);
+  line-height: 1;
+}
+
+/* 環形摘要有固定內徑，使用容器可承受的易讀尺寸，避免負四位數溢出圓環。 */
+.daily-balance-value {
+  font-size: clamp(26px, 7.5vw, 30px);
+  line-height: 1.1;
 }
 
 /* Hide Scrollbar */

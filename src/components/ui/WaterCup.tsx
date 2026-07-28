@@ -73,7 +73,7 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
             aria-label={`飲水追蹤，目前 ${current} ml，目標 ${target} ml${isReached ? '，已達成目標' : ''}，點擊記錄飲水`}
             // focus-visible 樣式是必要的：本專案是深色底，瀏覽器預設 focus ring 對比不足，
             // 鍵盤使用者會不知道焦點在哪。用 ring-offset-black 讓 ring 與卡片邊界分離。
-            className="relative w-full h-20 bg-neutral-900 rounded-xl border border-neutral-800 px-4 py-3 flex items-center justify-between cursor-pointer overflow-hidden group hover:border-neutral-700 transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+            className="relative w-full min-h-[80px] bg-neutral-900 rounded-xl border border-neutral-800 px-[16px] py-[12px] flex items-center justify-between cursor-pointer overflow-hidden group hover:border-neutral-700 transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         >
             <div className="z-10 min-w-0 flex flex-col gap-1">
                 <div className="text-neutral-300 text-xs font-bold flex items-center gap-1 whitespace-nowrap">
@@ -93,7 +93,7 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
                 )}
             </div>
 
-            <div className="relative w-12 h-16 mr-2 shrink-0">
+            <div className="relative w-[48px] h-[64px] mr-[8px] shrink-0">
                 {/* Cup Body - using mask/clip-path for shape */}
                 <div
                     className="absolute inset-0 border-2 border-neutral-600 rounded-b-lg opacity-30"

@@ -16,19 +16,19 @@ colors:
 typography:
   title:
     fontFamily: "Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "1.25rem"
+    fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.4
     letterSpacing: "0"
   body:
     fontFamily: "Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "1rem"
+    fontSize: "1.125rem"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "0"
   label:
     fontFamily: "Noto Sans TC, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "0.875rem"
+    fontSize: "1rem"
     fontWeight: 500
     lineHeight: 1.4
     letterSpacing: "0"
@@ -98,11 +98,11 @@ Near-black neutral layers create structure; teal is the interaction accent, whil
 **Character:** Clear and familiar. Weight and spacing establish hierarchy without introducing display typography.
 
 ### Hierarchy
-- **Headline** (700, 20px, 1.4): screen and modal titles.
-- **Title** (700, 16px, 1.4): section titles and important values.
-- **Body** (400, 16px, 1.5): explanations and editable content.
-- **Label** (500, 14px, 1.4): field labels, metadata, and compact controls.
-- **Caption** (500, 12px, 1.4): supporting data only; never essential instructions.
+- **Headline** (700, 24px, 1.35): screen and modal titles.
+- **Title** (700, 20px, 1.4): section titles and important values.
+- **Body** (400, 18px, 1.5): explanations and editable content.
+- **Label** (500, 16px, 1.5): field labels, metadata, and compact controls.
+- **Caption** (500, 14px, 1.4): supporting data only; never essential instructions.
 
 **The Stable Data Rule.** Numbers use tabular figures, keep units visible, and never resize their container when values change.
 

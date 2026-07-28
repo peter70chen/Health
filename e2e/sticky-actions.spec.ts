@@ -54,6 +54,17 @@ test('分析結果卡的「確認加入」在視窗內可見，不需捲動', as
   expect(box!.y + box!.height).toBeLessThanOrEqual(IPHONE_SE.height);
   expect(box!.y).toBeGreaterThanOrEqual(0);
 
+  // 只確認 bounding box 在畫面內還不夠：底部導覽曾經疊在按鈕上方，
+  // 看得到「確認加入」，但手指實際點到的是「體重與劑量」。
+  const buttonAtCenter = await page.evaluate(({ x, y }) => {
+    const hit = document.elementFromPoint(x, y);
+    return hit?.closest('button')?.textContent?.trim() ?? '';
+  }, {
+    x: box!.x + box!.width / 2,
+    y: box!.y + box!.height / 2,
+  });
+  expect(buttonAtCenter).toContain('確認加入');
+
   await page.screenshot({ path: 'verification-results/r2-sticky-save-button.png' });
 });
 
@@ -137,4 +148,31 @@ test('儀表板顯示四條營養素進度條，舊資料的纖維算作 0 不�
   expect(bodyText).not.toContain('NaN');
 
   await page.screenshot({ path: 'verification-results/r2-dashboard-4-macros.png', fullPage: true });
+});
+
+test('易讀字級在 320px 手機仍可完成首頁、體重與飲食記錄操作', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto(BASE_URL);
+
+  const typeScale = await page.evaluate(() => ({
+    label: getComputedStyle(document.querySelector('.text-xs')!).fontSize,
+    bodySmall: getComputedStyle(document.querySelector('.text-sm')!).fontSize,
+  }));
+  expect(typeScale).toEqual({ label: '14px', bodySmall: '16px' });
+
+  const hasHorizontalOverflow = async () => page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth
+  );
+
+  expect(await hasHorizontalOverflow()).toBe(false);
+  await expect(page.getByRole('button', { name: '記錄飲食' })).toBeVisible();
+
+  await page.getByRole('button', { name: /體重與劑量/ }).click();
+  expect(await hasHorizontalOverflow()).toBe(false);
+  await expect(page.getByLabel('體重 (kg)')).toBeVisible();
+
+  await page.getByRole('button', { name: /^今日/ }).click();
+  await page.getByRole('button', { name: '記錄飲食' }).click();
+  expect(await hasHorizontalOverflow()).toBe(false);
+  await expect(page.getByRole('button', { name: '拍照 / 上傳圖片' })).toBeVisible();
 });
