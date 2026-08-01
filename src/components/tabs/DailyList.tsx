@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Icons } from '../Icons';
 import { NUTRIENTS } from '../../lib/nutrientTheme';
+import { resolveAmountUnit, isLiquidAmount } from '../../lib/amountUnit';
 import type { FoodLog, ActivityLog, WaterLog, ConfirmModalState } from '../../types';
 
 interface DailyListProps {
@@ -59,9 +60,9 @@ export const DailyList: React.FC<DailyListProps> = ({ foodList, waterList, activ
                     </div>
                     <div className="text-xs text-neutral-400 font-medium mt-0.5 flex flex-wrap gap-x-2">
                       {(l.amount ?? 0) > 0 && (
-                        <span className={l.amountUnit === 'ml' || (!l.amountUnit && l.linkId) ? 'text-blue-400 flex items-center gap-1' : 'text-neutral-400'}>
-                          {(l.amountUnit === 'ml' || (!l.amountUnit && l.linkId)) && <Icons.Water className="w-3 h-3" />}
-                          {l.amount} {l.amountUnit ?? (l.linkId ? 'ml' : 'g')}
+                        <span className={isLiquidAmount(l) ? 'text-blue-400 flex items-center gap-1' : 'text-neutral-400'}>
+                          {isLiquidAmount(l) && <Icons.Water className="w-3 h-3" />}
+                          {l.amount} {resolveAmountUnit(l)}
                         </span>
                       )}
                       <span>+{l.calories} kcal</span>
