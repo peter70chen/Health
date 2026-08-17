@@ -46,6 +46,7 @@ test('分析結果卡的「確認加入」在視窗內可見，不需捲動', as
 
   const saveButton = page.getByRole('button', { name: /確認加入/ });
   await expect(saveButton).toBeVisible();
+  await expect(saveButton).toBeInViewport();
 
   // 關鍵斷言：按鈕的可視區塊必須完整落在視窗高度內。
   // 若 sticky footer 失效，卡片很長時按鈕會落在 viewport 外（y > 667）。
@@ -136,10 +137,10 @@ test('儀表板顯示四條營養素進度條，舊資料的纖維算作 0 不�
   await seedStorage(page);
   await page.goto(BASE_URL);
 
-  await expect(page.getByText('蛋白質攝取')).toBeVisible();
-  await expect(page.getByText('碳水化合物攝取')).toBeVisible();
-  await expect(page.getByText('脂肪攝取')).toBeVisible();
-  await expect(page.getByText('膳食纖維攝取')).toBeVisible();
+  await expect(page.getByText('蛋白質')).toBeVisible();
+  await expect(page.getByText('碳水化合物')).toBeVisible();
+  await expect(page.getByText('脂肪')).toBeVisible();
+  await expect(page.getByText('膳食纖維')).toBeVisible();
 
   // 燕麥優格 7g + 舊紀錄（無欄位）0g = 7g，不可以是 NaN
   await expect(page.getByText('7 / 25g')).toBeVisible();

@@ -26,10 +26,10 @@ export type NutrientStyle = {
 export const NUTRIENTS: Record<NutrientKey, NutrientStyle> = {
   // 碳水刻意用 amber 而非 yellow：yellow-400 在 neutral-900 深底上偏刺眼且對比較弱
   calories: { label: '熱量', short: 'kcal', text: 'text-orange-500', bar: 'bg-orange-500', barText: 'text-orange-300' },
-  protein: { label: '蛋白質攝取', short: 'P', text: 'text-blue-400', bar: 'bg-blue-500', barText: 'text-blue-300' },
-  carbs: { label: '碳水化合物攝取', short: 'C', text: 'text-amber-400', bar: 'bg-amber-500', barText: 'text-amber-300' },
+  protein: { label: '蛋白質', short: 'P', text: 'text-blue-400', bar: 'bg-blue-500', barText: 'text-blue-300' },
+  carbs: { label: '碳水化合物', short: 'C', text: 'text-amber-400', bar: 'bg-amber-500', barText: 'text-amber-300' },
   // 脂肪用 rose，讓 green 保留給「完成／正常」等狀態，不讓資料與狀態撞色。
-  fat: { label: '脂肪攝取', short: 'F', text: 'text-rose-400', bar: 'bg-rose-500', barText: 'text-rose-300' },
+  fat: { label: '脂肪', short: 'F', text: 'text-rose-400', bar: 'bg-rose-500', barText: 'text-rose-300' },
   // 纖維維持紫色，與另外三項及介面狀態都有清楚區隔。
-  fiber: { label: '膳食纖維攝取', short: '纖', text: 'text-violet-400', bar: 'bg-violet-500', barText: 'text-violet-300' },
+  fiber: { label: '膳食纖維', short: '纖', text: 'text-violet-400', bar: 'bg-violet-500', barText: 'text-violet-300' },
 };

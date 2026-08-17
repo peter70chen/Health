@@ -88,9 +88,9 @@ const MacroBar: React.FC<{
   const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   return (
     <div>
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-neutral-400 font-medium">{nutrient.label}</span>
-        <span className={`${nutrient.barText} font-bold`}>{current} / {target}g</span>
+      <div className="flex items-baseline justify-between gap-1 text-xs min-[360px]:text-sm mb-1">
+        <span className="text-neutral-400 font-medium whitespace-nowrap">{nutrient.label}</span>
+        <span className={`${nutrient.barText} font-bold whitespace-nowrap tabular-nums`}>{current} / {target}g</span>
       </div>
       <div className="h-2.5 bg-neutral-800 rounded-full overflow-hidden">
         <div className={`h-full ${nutrient.bar} transition-all duration-500 ease-out`} style={{ width: `${pct}%` }}></div>
