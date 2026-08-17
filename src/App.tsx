@@ -1340,7 +1340,7 @@ const App: React.FC = () => {
 
       {/* Header */}
       <header className="sticky top-0 bg-neutral-950/95 backdrop-blur z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 flex flex-wrap justify-between items-center gap-y-1 border-b border-neutral-800">
-        <h1 className="text-lg min-[360px]:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0"><Icons.Activity className="w-5 h-5 text-teal-400" /> Health Plan <span className="hidden sm:inline text-xs text-neutral-500 font-normal">{APP_DISPLAY_VERSION}</span></h1>
+        <h1 className="text-lg min-[360px]:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0"><Icons.Activity className="w-5 h-5 text-teal-400" /> Health Plan <span className="text-[10px] min-[360px]:text-xs text-neutral-500 font-normal">{APP_DISPLAY_VERSION}</span></h1>
         <div ref={moreMenuRef} className="relative ml-auto">
           <button
             title="更多功能"
