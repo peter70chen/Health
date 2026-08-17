@@ -1,4 +1,4 @@
-# Health Plan v2.2
+# Health Plan v2.5
 
 智能熱量與運動追蹤應用程式，由 Gemini AI 驅動。
 
@@ -25,7 +25,7 @@
 # 安裝依賴
 npm install
 
-# 啟動開發伺服器 (預設 http://localhost:3000)
+# 啟動開發伺服器 (預設 http://localhost:5173)
 npm run dev
 
 # 建置生產版本

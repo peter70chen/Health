@@ -12,10 +12,6 @@ interface WeightFormProps {
   setInputMuscle: (muscle: string) => void;
   inputVisceral: string;
   setInputVisceral: (visceral: string) => void;
-  inputDose: string;
-  setInputDose: (dose: string) => void;
-  inputNotes: string;
-  setInputNotes: (notes: string) => void;
   handleWeightSubmit: (e: React.FormEvent) => void;
 }
 
@@ -30,10 +26,6 @@ export const WeightForm: React.FC<WeightFormProps> = ({
   setInputMuscle,
   inputVisceral,
   setInputVisceral,
-  inputDose,
-  setInputDose,
-  inputNotes,
-  setInputNotes,
   handleWeightSubmit
 }) => {
   return (
@@ -53,37 +45,19 @@ export const WeightForm: React.FC<WeightFormProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-3">
           <div>
-            <label htmlFor="body-fat-value" className="text-[10px] font-bold text-rose-400 block mb-1 truncate">體脂率 %</label>
+            <label htmlFor="body-fat-value" className="text-xs font-bold text-rose-400 block mb-1">體脂率 %</label>
             <input id="body-fat-value" type="number" step="0.1" value={inputBodyFat} onChange={e => setInputBodyFat(e.target.value)} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-lg text-sm font-bold outline-none focus:border-rose-500 text-white" placeholder="0.0" />
           </div>
           <div>
-            <label htmlFor="muscle-value" className="text-[10px] font-bold text-blue-400 block mb-1 truncate">骨骼肌 kg</label>
+            <label htmlFor="muscle-value" className="text-xs font-bold text-blue-400 block mb-1">骨骼肌 kg</label>
             <input id="muscle-value" type="number" step="0.1" value={inputMuscle} onChange={e => setInputMuscle(e.target.value)} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-lg text-sm font-bold outline-none focus:border-blue-500 text-white" placeholder="0.0" />
           </div>
           <div>
-            <label htmlFor="visceral-fat-value" className="text-[10px] font-bold text-zinc-400 block mb-1 truncate">內臟脂肪</label>
+            <label htmlFor="visceral-fat-value" className="text-xs font-bold text-zinc-400 block mb-1">內臟脂肪</label>
             <input id="visceral-fat-value" type="number" step="0.5" value={inputVisceral} onChange={e => setInputVisceral(e.target.value)} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-lg text-sm font-bold outline-none focus:border-zinc-500 text-white" placeholder="0" />
           </div>
-        </div>
-
-        <div>
-          <label htmlFor="dose-value" className="text-xs font-bold text-neutral-400 block mb-1">本週施打劑量 (mg)</label>
-          <select id="dose-value" value={inputDose} onChange={e => setInputDose(e.target.value)} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-lg text-sm font-bold text-neutral-300 outline-none focus:border-teal-500 appearance-none cursor-pointer">
-            <option value="2.5">2.5 mg (起始)</option>
-            <option value="3.75">3.75 mg</option>
-            <option value="5.0">5.0 mg (標準)</option>
-            <option value="7.5">7.5 mg</option>
-            <option value="10.0">10.0 mg</option>
-            <option value="12.5">12.5 mg</option>
-            <option value="15.0">15.0 mg</option>
-            <option value="0">0 mg (本週未施打)</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="weight-notes" className="text-xs font-bold text-neutral-400 block mb-1">副作用/不適感 (選填)</label>
-          <textarea id="weight-notes" value={inputNotes} onChange={e => setInputNotes(e.target.value)} className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-lg text-sm text-neutral-300 font-medium resize-none focus:outline-none focus:border-teal-500" placeholder="例如：輕微噁心、頭暈..." rows={2} />
         </div>
         <button type="submit" className="w-full bg-teal-600 text-white p-4 rounded-lg text-base font-bold mt-2 active:scale-[0.98] transition-all hover:bg-teal-500">儲存記錄</button>
       </form>

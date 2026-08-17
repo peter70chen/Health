@@ -145,7 +145,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
           onLongPress={onQuickAddWater}
         />
       </div>
-      <div className="mt-4 pt-4 border-t border-neutral-800 space-y-3">
+      <div className="mt-4 pt-4 border-t border-neutral-800 grid grid-cols-2 gap-x-4 gap-y-3" aria-label="今日營養素進度">
         <MacroBar nutrient={NUTRIENTS.protein} current={dailyFood.pro} target={CONFIG.PRO_TARGET} />
         <MacroBar nutrient={NUTRIENTS.carbs} current={dailyFood.carbs} target={CONFIG.CARB_TARGET} />
         <MacroBar nutrient={NUTRIENTS.fat} current={dailyFood.fat} target={CONFIG.FAT_TARGET} />

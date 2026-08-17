@@ -5,8 +5,10 @@ import {
   sanitizeFavoriteFoods,
   sanitizeFavoriteWaterContainers,
   sanitizeFoodLogs,
-  sanitizeWaterLogs
+  sanitizeWaterLogs,
+  sanitizeWeightLogs
 } from '../lib/dataSanitizers';
+import { COACH_ADVICE_VERSION } from '../lib/prompts';
 import { safeLoadFromStorage, sortByDateAndIdDesc } from '../lib/utils';
 import type {
   ApiKeys,
@@ -70,7 +72,7 @@ export const useHydrateFromStorage = ({
   setLoading
 }: LoadArgs) => {
   useEffect(() => {
-    setWeightLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.WEIGHT_LOGS, [])));
+    setWeightLogs(sortByDateAndIdDesc(sanitizeWeightLogs(safeLoadFromStorage(STORAGE_KEYS.WEIGHT_LOGS, []))));
     setFoodLogs(sortByDateAndIdDesc(sanitizeFoodLogs(safeLoadFromStorage(STORAGE_KEYS.FOOD_LOGS, []))));
     setActivityLogs(sortByDateAndIdDesc(sanitizeActivityLogs(safeLoadFromStorage(STORAGE_KEYS.ACTIVITY_LOGS, []))));
     setFavoriteFoods(sanitizeFavoriteFoods(safeLoadFromStorage(STORAGE_KEYS.FAVORITE_FOODS, [])));
@@ -80,12 +82,19 @@ export const useHydrateFromStorage = ({
     setResistanceLogs(sortByDateAndIdDesc(safeLoadFromStorage(STORAGE_KEYS.RESISTANCE_LOGS, [])));
 
     const ca = localStorage.getItem(STORAGE_KEYS.COACH_ADVICE);
+    const coachAdviceVersion = localStorage.getItem(STORAGE_KEYS.COACH_ADVICE_VERSION);
     const dt = localStorage.getItem(STORAGE_KEYS.DAILY_TARGET);
     const at = localStorage.getItem(STORAGE_KEYS.ACTIVITY_TARGET);
     const wt = localStorage.getItem(STORAGE_KEYS.WATER_TARGET);
     const k = localStorage.getItem(STORAGE_KEYS.API_KEYS);
 
-    if (ca) setCoachAdvice(ca);
+    if (coachAdviceVersion === COACH_ADVICE_VERSION && ca) {
+      setCoachAdvice(ca);
+    } else {
+      // 舊版建議可能含已移除的產品假設，載入時直接失效，不依賴關鍵字搜尋。
+      localStorage.removeItem(STORAGE_KEYS.COACH_ADVICE);
+      localStorage.setItem(STORAGE_KEYS.COACH_ADVICE_VERSION, COACH_ADVICE_VERSION);
+    }
     if (dt) setDailyTarget(Number(dt));
     if (at) setActivityTarget(Number(at));
     if (wt) setWaterTarget(Number(wt));
@@ -132,13 +141,14 @@ export const usePersistToStorage = ({
 }: PersistArgs) => {
   useEffect(() => {
     if (loading) return;
-    localStorage.setItem(STORAGE_KEYS.WEIGHT_LOGS, JSON.stringify(weightLogs));
+    localStorage.setItem(STORAGE_KEYS.WEIGHT_LOGS, JSON.stringify(sanitizeWeightLogs(weightLogs)));
     localStorage.setItem(STORAGE_KEYS.FOOD_LOGS, JSON.stringify(sanitizeFoodLogs(foodLogs)));
     localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(sanitizeActivityLogs(activityLogs)));
     localStorage.setItem(STORAGE_KEYS.FAVORITE_FOODS, JSON.stringify(sanitizeFavoriteFoods(favoriteFoods)));
     localStorage.setItem(STORAGE_KEYS.WATER_LOGS, JSON.stringify(sanitizeWaterLogs(waterLogs)));
     localStorage.setItem(STORAGE_KEYS.FAVORITE_WATER_CONTAINERS, JSON.stringify(sanitizeFavoriteWaterContainers(favoriteWaterContainers)));
     localStorage.setItem(STORAGE_KEYS.COACH_ADVICE, coachAdvice);
+    localStorage.setItem(STORAGE_KEYS.COACH_ADVICE_VERSION, COACH_ADVICE_VERSION);
     localStorage.setItem(STORAGE_KEYS.DAILY_TARGET, dailyTarget.toString());
     localStorage.setItem(STORAGE_KEYS.ACTIVITY_TARGET, activityTarget.toString());
     localStorage.setItem(STORAGE_KEYS.WATER_TARGET, waterTarget.toString());

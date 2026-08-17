@@ -6,7 +6,7 @@ product
 
 ## Users
 
-This is a personal health tracker used primarily by Peter on an iPhone. It is opened many times a day, often one-handed, to record food, water, exercise, resistance training, weight, body composition, medication dose, and symptoms. Peter has presbyopia, so readable text takes priority over maximum information density.
+This is a personal health tracker used primarily by Peter on an iPhone. It is opened many times a day, often one-handed, to record food, water, exercise, resistance training, weight, and body composition. Peter has presbyopia, so readable text takes priority over maximum information density.
 
 ## Product Purpose
 

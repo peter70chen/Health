@@ -39,31 +39,25 @@ export const WeightHistory: React.FC<WeightHistoryProps> = ({
             <div className="flex justify-between items-center mb-2">
               <span className="text-teal-400 font-bold text-lg">{currentWeightRecord.date}</span>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-3">
-              <div>
-                <div className="text-xs text-neutral-400 mb-1">體重</div>
-                <div className="text-xl font-extrabold text-white">{currentWeightRecord.weight} kg</div>
-              </div>
-              <div>
-                <div className="text-xs text-neutral-400 mb-1">劑量</div>
-                <div className="text-xl font-extrabold text-purple-400">{currentWeightRecord.dose || 0} mg</div>
-              </div>
+            <div className="mb-3">
+              <div className="text-xs text-neutral-400 mb-1">體重</div>
+              <div className="text-xl font-extrabold text-white">{currentWeightRecord.weight} kg</div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {currentWeightRecord.bodyFat && (
+            <div className="grid grid-cols-2 min-[360px]:grid-cols-4 gap-3 mb-3">
+              {currentWeightRecord.bodyFat !== undefined && (
                 <div>
                   <div className="text-xs text-neutral-400 mb-1">體脂率</div>
                   <div className="text-lg font-bold text-rose-400">{currentWeightRecord.bodyFat}%</div>
                 </div>
               )}
-              {currentWeightRecord.muscle && (
+              {currentWeightRecord.muscle !== undefined && (
                 <div>
                   <div className="text-xs text-neutral-400 mb-1">骨骼肌</div>
                   <div className="text-lg font-bold text-blue-400">{currentWeightRecord.muscle} kg</div>
                 </div>
               )}
-              {currentWeightRecord.visceral && (
+              {currentWeightRecord.visceral !== undefined && (
                 <div>
                   <div className="text-xs text-neutral-400 mb-1">內臟脂肪</div>
                   <div className="text-lg font-bold text-zinc-400">{currentWeightRecord.visceral}</div>
@@ -71,13 +65,6 @@ export const WeightHistory: React.FC<WeightHistoryProps> = ({
               )}
             </div>
 
-            {currentWeightRecord.notes ? (
-              <div className="text-sm text-neutral-300 bg-black/20 p-3 rounded border border-neutral-700/50">
-                <span className="text-neutral-400 text-xs block mb-1">備註</span>{currentWeightRecord.notes}
-              </div>
-            ) : (
-              <div className="text-xs text-neutral-400 italic">無備註</div>
-            )}
           </div>
         </div>
       )}

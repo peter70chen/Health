@@ -16,7 +16,7 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLongPress = useRef(false);
 
-    const handleTouchStart = useCallback(() => {
+    const handlePointerDown = useCallback(() => {
         isLongPress.current = false;
         longPressTimer.current = setTimeout(() => {
             isLongPress.current = true;
@@ -30,7 +30,7 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
         }, 500); // 500ms 觸發長按
     }, [onLongPress]);
 
-    const handleTouchEnd = useCallback(() => {
+    const handlePointerUp = useCallback(() => {
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
             longPressTimer.current = null;
@@ -41,7 +41,7 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
         }
     }, [onClick]);
 
-    const handleTouchMove = useCallback(() => {
+    const handlePointerCancel = useCallback(() => {
         // 手指移動時取消長按
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
@@ -50,13 +50,12 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
     }, []);
 
     return (
-        <div
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onTouchMove={handleTouchMove}
-            onMouseDown={handleTouchStart}
-            onMouseUp={handleTouchEnd}
-            onMouseLeave={handleTouchMove}
+        <button
+            type="button"
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onPointerLeave={handlePointerCancel}
             onKeyDown={(e) => {
                 // 鍵盤使用者：Enter/Space 等同點擊（長按快速加水無鍵盤等價操作，屬已知取捨）。
                 // e.repeat 擋掉「按住不放」的自動重複——否則壓著 Enter 會連續記錄好幾杯水。
@@ -66,10 +65,7 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
                     onClick();
                 }
             }}
-            role="button"
-            tabIndex={0}
-            // role="button" 會讓 aria-label 蓋掉內部所有文字，「✨ 目標達成」徽章
-            // 螢幕閱讀器聽不到，所以把達標狀態併進 label 裡。
+            // accessible name 仍包含達標狀態，避免只讀到視覺卡片裡的部分文字。
             aria-label={`飲水追蹤，目前 ${current} ml，目標 ${target} ml${isReached ? '，已達成目標' : ''}，點擊記錄飲水`}
             // focus-visible 樣式是必要的：本專案是深色底，瀏覽器預設 focus ring 對比不足，
             // 鍵盤使用者會不知道焦點在哪。用 ring-offset-black 讓 ring 與卡片邊界分離。
@@ -129,7 +125,7 @@ export const WaterCup: React.FC<WaterCupProps> = ({ current, target, onClick, on
                 {/* Highlights */}
                 <div className="absolute top-2 left-2 w-0.5 h-8 bg-white/10 rounded-full blur-[1px]"></div>
             </div>
-        </div>
+        </button>
     );
 };
 

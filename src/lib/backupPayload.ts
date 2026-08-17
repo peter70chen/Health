@@ -3,8 +3,10 @@ import {
   sanitizeFavoriteFoods,
   sanitizeFavoriteWaterContainers,
   sanitizeFoodLogs,
-  sanitizeWaterLogs
+  sanitizeWaterLogs,
+  sanitizeWeightLogs
 } from './dataSanitizers';
+import { COACH_ADVICE_VERSION } from './prompts';
 import type {
   WeightLog,
   FoodLog,
@@ -25,6 +27,7 @@ export type ExportData = {
   waterLogs: WaterLog[];
   favoriteWaterContainers: FavoriteWaterContainer[];
   coachAdvice: string;
+  coachAdviceVersion?: string;
   dailyTarget: number;
   activityTarget: number;
   waterTarget: number;
@@ -36,9 +39,12 @@ export type ExportData = {
 /** 手動匯出與雲端備份共用的資料淨化 */
 export const sanitizeExportData = (exportData: ExportData): ExportData => ({
   ...exportData,
+  weightLogs: sanitizeWeightLogs(exportData.weightLogs),
   foodLogs: sanitizeFoodLogs(exportData.foodLogs),
   activityLogs: sanitizeActivityLogs(exportData.activityLogs),
   favoriteFoods: sanitizeFavoriteFoods(exportData.favoriteFoods),
   waterLogs: sanitizeWaterLogs(exportData.waterLogs),
-  favoriteWaterContainers: sanitizeFavoriteWaterContainers(exportData.favoriteWaterContainers)
+  favoriteWaterContainers: sanitizeFavoriteWaterContainers(exportData.favoriteWaterContainers),
+  coachAdvice: exportData.coachAdviceVersion === COACH_ADVICE_VERSION ? exportData.coachAdvice : '',
+  coachAdviceVersion: COACH_ADVICE_VERSION
 });

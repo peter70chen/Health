@@ -4,6 +4,7 @@
  */
 
 export const FOOD_PROMPT_VERSION = 'food-v2.0';
+export const COACH_ADVICE_VERSION = 'health-coach-v2';
 
 export const PROMPTS = {
   foodImage: `你是台灣飲食情境的食物影像分析員。請只回傳符合指定 schema 的 JSON。
@@ -59,8 +60,7 @@ notes 使用繁體中文，80 字內，指出最值得人工確認的項目。`,
 【纖維】一般飲料為 0。只有含果肉果汁、蔬果昔、燕麥奶、高纖機能飲品才給非 0 值（通常 1-4g）。
 回傳純 JSON：{ "amount": 數字, "beverageName": "飲料名稱", "calories": 數字, "protein": 數字, "carbs": 數字, "fat": 數字, "fiber": 數字, "notes": "簡短描述判斷依據。" }`,
 
-  coachReview: `你是一位熟悉 GLP-1/GIP 雙促效劑（如猛健樂 Mounjaro）的專業減重教練與營養師。
-用戶目前正在使用猛健樂，最新記錄到的劑量為 {{dose}} mg。
+  coachReview: `你是一位專注於飲食、運動與體重趨勢的健康教練。
 請根據用戶最近 7 天的數據給予綜合建議：
 數據摘要：
 - 體重變化：從 {{startW}} kg 變為 {{endW}} kg
@@ -68,15 +68,11 @@ notes 使用繁體中文，80 字內，指出最值得人工確認的項目。`,
 - 7天總運動消耗：{{totalOut}} kcal (日均 {{avgOut}} kcal)
 - 日均營養素：蛋白質 {{avgPro}} g (目標 {{proTarget}} g)、碳水 {{avgCarbs}} g、脂肪 {{avgFat}} g、膳食纖維 {{avgFiber}} g (目標 {{fiberTarget}} g)
 請給出一段約 150-200 字的建議，內容需包含：
-1. 飲食與運動建議：考慮藥物抑制食慾的特性，特別注意蛋白質與水分攝取，避免肌肉流失。
-   若日均膳食纖維明顯低於目標，請具體建議補充來源（蔬菜、豆類、全穀），並提醒 GLP-1 常見的便秘問題；
-   若纖維已達標或偏高且有腸胃不適，則提醒不要再往上加。
-2. 藥物與體重評估：
-- 若體重停滯：分析是否熱量赤字不足或身體適應，是否建議與醫師討論調整劑量？
-- 若體重下降順利：鼓勵維持，並注意副作用。
-- 若副作用明顯（參考備註）：提供緩解建議。
-3. 心理支持。
-請用繁體中文，語氣專業、溫暖且具體。請務必加上「藥物調整與副作用處理請務必諮詢主治醫師」的免責聲明。
+1. 飲食與運動建議：特別注意蛋白質、水分與規律活動，並以可持續的方式支持體重與肌肉趨勢。
+   若日均膳食纖維明顯低於目標，請具體建議補充來源（蔬菜、豆類、全穀）。
+2. 體重趨勢評估：若體重停滯，分析熱量、活動量與紀錄完整度；若趨勢穩定，指出值得維持的習慣。
+3. 心理支持：提供一個今天就能執行的小步驟，不使用責備語氣。
+請用繁體中文，語氣專業、溫暖且具體；只根據提供的資料，不要臆測未記錄的原因。
 回傳純 JSON 格式：{ "advice": "建議內容..." }`,
   resistanceCalc: `你是一位專業健身教練。以下是用戶進行的阻力訓練項目列表。
 用戶體重：{{weight}} kg。
@@ -91,3 +87,33 @@ notes 使用繁體中文，80 字內，指出最值得人工確認的項目。`,
 5. 若結果超過每分鐘 8 kcal，請重新檢查並調低，除非 notes 清楚說明原因。
 回傳純 JSON：{ "totalCalories": 數字, "notes": "簡短說明估算強度與是否保守估計(約30字)" }`,
 } as const;
+
+export type CoachPromptValues = {
+  startW: number;
+  endW: number;
+  totalIn: number;
+  avgIn: number;
+  totalOut: number;
+  avgOut: number;
+  avgPro: number;
+  avgCarbs: number;
+  avgFat: number;
+  avgFiber: number;
+  proTarget: number;
+  fiberTarget: number;
+};
+
+export const buildCoachPrompt = (values: CoachPromptValues): string =>
+  PROMPTS.coachReview
+    .replace('{{startW}}', String(values.startW))
+    .replace('{{endW}}', String(values.endW))
+    .replace('{{totalIn}}', String(values.totalIn))
+    .replace('{{avgIn}}', String(values.avgIn))
+    .replace('{{totalOut}}', String(values.totalOut))
+    .replace('{{avgOut}}', String(values.avgOut))
+    .replace('{{avgPro}}', String(values.avgPro))
+    .replace('{{avgCarbs}}', String(values.avgCarbs))
+    .replace('{{avgFat}}', String(values.avgFat))
+    .replace('{{avgFiber}}', String(values.avgFiber))
+    .replace('{{proTarget}}', String(values.proTarget))
+    .replace('{{fiberTarget}}', String(values.fiberTarget));

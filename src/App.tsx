@@ -19,7 +19,7 @@ import { FOOD_ANALYSIS_JSON_SCHEMA, parseFoodAnalysis } from './lib/foodAnalysis
 import { applyFoodCorrectionMemory, rememberFoodCorrections } from './lib/foodCorrectionMemory';
 import { prepareImageForAnalysis } from './lib/imageProcessing';
 import { getDataHealthIssues } from './lib/dataHealth';
-import { FOOD_PROMPT_VERSION, PROMPTS } from './lib/prompts';
+import { buildCoachPrompt, COACH_ADVICE_VERSION, FOOD_PROMPT_VERSION, PROMPTS } from './lib/prompts';
 import { CONFIG, STORAGE_KEYS } from './lib/config';
 import { NUTRIENTS } from './lib/nutrientTheme';
 import { removeTransientImagePreview } from './lib/dataSanitizers';
@@ -81,6 +81,8 @@ const App: React.FC = () => {
   const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatus>('unverified');
   const [showSettings, setShowSettings] = useState(false);
   const [showDataHealth, setShowDataHealth] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showMoreAnalysis, setShowMoreAnalysis] = useState(false);
   const [trendRange, setTrendRange] = useState(7);
   const [weightRange, setWeightRange] = useState(7);
 
@@ -105,8 +107,6 @@ const App: React.FC = () => {
   const [inputBodyFat, setInputBodyFat] = useState('');
   const [inputMuscle, setInputMuscle] = useState('');
   const [inputVisceral, setInputVisceral] = useState('');
-  const [inputDose, setInputDose] = useState('2.5');
-  const [inputNotes, setInputNotes] = useState('');
 
   const [inputModalType, setInputModalType] = useState<'food' | 'activity' | 'water' | null>(null);
   const [inputMethod, setInputMethod] = useState<'ai' | 'manual' | 'favorites' | 'resistance'>('ai');
@@ -151,6 +151,7 @@ const App: React.FC = () => {
   const referenceFileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const analysisResultRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useAutoClearStatus(
@@ -257,6 +258,26 @@ const App: React.FC = () => {
 
   useEffect(() => { if (weightHistoryDate) setShowWeightHistory(true); }, [weightHistoryDate]);
 
+  useEffect(() => {
+    if (!showMoreMenu) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowMoreMenu(false);
+    };
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+
+    document.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+    };
+  }, [showMoreMenu]);
+
   const handleApiKeyChange = (value: string) => {
     setApiKeys(previous => ({
       ...previous,
@@ -356,6 +377,7 @@ const App: React.FC = () => {
     waterLogs,
     favoriteWaterContainers,
     coachAdvice,
+    coachAdviceVersion: COACH_ADVICE_VERSION,
     dailyTarget,
     activityTarget,
     waterTarget,
@@ -619,27 +641,20 @@ const App: React.FC = () => {
       const latestWeightLog = sortByDateAndIdDesc(weightLogs)[0];
       const startW = recentWeights.length > 0 ? recentWeights[0].weight : (latestWeightLog?.weight || CONFIG.START_W);
       const endW = recentWeights.length > 0 ? recentWeights[recentWeights.length - 1].weight : startW;
-      const currentDose = (() => {
-        const hasDose = (d: string | undefined) => d !== undefined && d !== null && String(d).trim() !== '';
-        const doseInRange = recentWeights.slice().reverse().find(l => hasDose(l.dose));
-        if (doseInRange) return doseInRange.dose;
-        const anyDose = sortByDateAndIdDesc(weightLogs).find(l => hasDose(l.dose));
-        return anyDose ? anyDose.dose : '未知';
-      })();
-      const prompt = PROMPTS.coachReview
-        .replace('{{startW}}', String(startW))
-        .replace('{{endW}}', String(endW))
-        .replace('{{totalIn}}', String(totalIn))
-        .replace('{{avgIn}}', String(Math.round(totalIn / 7)))
-        .replace('{{totalOut}}', String(totalOut))
-        .replace('{{avgOut}}', String(Math.round(totalOut / 7)))
-        .replace('{{avgPro}}', String(Math.round(macroTotals.pro / 7)))
-        .replace('{{avgCarbs}}', String(Math.round(macroTotals.carbs / 7)))
-        .replace('{{avgFat}}', String(Math.round(macroTotals.fat / 7)))
-        .replace('{{avgFiber}}', String(Math.round(macroTotals.fiber / 7)))
-        .replace('{{proTarget}}', String(CONFIG.PRO_TARGET))
-        .replace('{{fiberTarget}}', String(CONFIG.FIBER_TARGET))
-        .replace('{{dose}}', String(currentDose));
+      const prompt = buildCoachPrompt({
+        startW,
+        endW,
+        totalIn,
+        avgIn: Math.round(totalIn / 7),
+        totalOut,
+        avgOut: Math.round(totalOut / 7),
+        avgPro: Math.round(macroTotals.pro / 7),
+        avgCarbs: Math.round(macroTotals.carbs / 7),
+        avgFat: Math.round(macroTotals.fat / 7),
+        avgFiber: Math.round(macroTotals.fiber / 7),
+        proTarget: CONFIG.PRO_TARGET,
+        fiberTarget: CONFIG.FIBER_TARGET
+      });
       const res = (await callGeminiStructured<{ advice?: string; reply?: string }>(
         prompt,
         setCoachStatus,
@@ -1024,20 +1039,16 @@ const App: React.FC = () => {
     if (muscle === null && inputMuscle.trim()) return;
     const visceral = inputVisceral.trim() ? parseNumber(inputVisceral, '內臟脂肪', { min: 0 }) : null;
     if (visceral === null && inputVisceral.trim()) return;
-    const dose = inputDose.trim() ? parseNumber(inputDose, '劑量', { min: 0.01 }) : null;
-    if (dose === null && inputDose.trim()) return;
     const newLog: WeightLog = {
       id: Date.now(),
       date: inputDate,
       weight: parseFloat(weight.toFixed(1)),
       bodyFat: bodyFat !== null ? parseFloat(bodyFat.toFixed(1)) : undefined,
       muscle: muscle !== null ? parseFloat(muscle.toFixed(1)) : undefined,
-      visceral: visceral !== null ? parseFloat(visceral.toFixed(1)) : undefined,
-      dose: dose !== null ? String(dose) : inputDose,
-      notes: inputNotes
+      visceral: visceral !== null ? parseFloat(visceral.toFixed(1)) : undefined
     };
     setWeightLogs(prev => sortByDateAndIdDesc([newLog, ...prev]));
-    setInputWeight(''); setInputBodyFat(''); setInputMuscle(''); setInputVisceral(''); setInputNotes('');
+    setInputWeight(''); setInputBodyFat(''); setInputMuscle(''); setInputVisceral('');
     setStatusMessage({ type: 'success', text: '體重資料已儲存！' });
   };
 
@@ -1330,10 +1341,30 @@ const App: React.FC = () => {
       {/* Header */}
       <header className="sticky top-0 bg-neutral-950/95 backdrop-blur z-50 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 flex flex-wrap justify-between items-center gap-y-1 border-b border-neutral-800">
         <h1 className="text-lg min-[360px]:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0"><Icons.Activity className="w-5 h-5 text-teal-400" /> Health Plan <span className="hidden sm:inline text-xs text-neutral-500 font-normal">{APP_DISPLAY_VERSION}</span></h1>
-        <div className="flex gap-1 ml-auto">
-          <button title="設定" aria-label="開啟設定" onClick={() => setShowSettings(!showSettings)} className={`flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-neutral-800 hover:text-teal-300 ${hasAnyKey ? 'text-teal-300' : 'text-neutral-300'}`}><Icons.Settings /></button>
-          <button title="資料健康檢查" aria-label="資料健康檢查" onClick={() => setShowDataHealth(true)} className={`relative flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-neutral-800 hover:text-teal-300 ${dataHealthIssues.length > 0 ? 'text-amber-300' : 'text-neutral-300'}`}><Icons.ScanEye />{dataHealthIssues.length > 0 && <span aria-hidden="true" className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400" />}</button>
-          <button title="匯出訓練資料" aria-label="匯出訓練資料" onClick={handleTrainingExport} className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-teal-300"><Icons.Download className="w-5 h-5" /></button>
+        <div ref={moreMenuRef} className="relative ml-auto">
+          <button
+            title="更多功能"
+            aria-label="開啟更多功能"
+            aria-haspopup="menu"
+            aria-expanded={showMoreMenu}
+            onClick={() => setShowMoreMenu(value => !value)}
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-teal-300"
+          >
+            <Icons.MoreHorizontal />
+          </button>
+          {showMoreMenu && (
+            <div role="menu" aria-label="更多功能" className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-neutral-700 bg-neutral-900 p-2 shadow-xl">
+              <button role="menuitem" onClick={() => { setShowSettings(value => !value); setShowMoreMenu(false); }} className="w-full min-h-[44px] px-3 rounded-lg flex items-center gap-3 text-left text-sm font-bold text-neutral-200 hover:bg-neutral-800">
+                <Icons.Settings className="w-4 h-4 text-teal-300" /> 設定
+              </button>
+              <button role="menuitem" aria-label="資料健康檢查" onClick={() => { setShowDataHealth(true); setShowMoreMenu(false); }} className="w-full min-h-[44px] px-3 rounded-lg flex items-center gap-3 text-left text-sm font-bold text-neutral-200 hover:bg-neutral-800">
+                <span className="relative"><Icons.ScanEye className="w-4 h-4 text-amber-300" />{dataHealthIssues.length > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-amber-400" />}</span> 資料健康檢查
+              </button>
+              <button role="menuitem" onClick={() => { handleTrainingExport(); setShowMoreMenu(false); }} className="w-full min-h-[44px] px-3 rounded-lg flex items-center gap-3 text-left text-sm font-bold text-neutral-200 hover:bg-neutral-800">
+                <Icons.Download className="w-4 h-4 text-teal-300" /> 匯出訓練資料
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -1559,8 +1590,25 @@ const App: React.FC = () => {
             {/* Daily List */}
             <DailyList foodList={dailyFoodList} waterList={dailyWaterList} activityList={dailyActivityList} setConfirmModal={setConfirmModal} onEditFoodPortion={openFoodPortionEditor} />
 
-            {/* Trend Chart */}
-            <div className="bg-neutral-900 rounded-lg border border-neutral-800 p-4 mt-8">
+            {/* Secondary analysis: keep the daily logging path short, while preserving every existing tool. */}
+            <section className="mt-2 rounded-xl border border-neutral-800 bg-neutral-950/60 overflow-hidden" aria-labelledby="more-analysis-title">
+              <button
+                type="button"
+                aria-expanded={showMoreAnalysis}
+                aria-controls="more-analysis-panel"
+                onClick={() => setShowMoreAnalysis(value => !value)}
+                className="w-full min-h-[64px] px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-neutral-900 transition-colors"
+              >
+                <span className="min-w-0">
+                  <span id="more-analysis-title" className="block text-base font-bold text-neutral-200">更多分析</span>
+                  <span className="block text-sm text-neutral-500 mt-0.5">趨勢、歷史查詢與 AI 教練</span>
+                </span>
+                <Icons.ChevronDown className={`w-5 h-5 shrink-0 text-neutral-500 transition-transform duration-200 ${showMoreAnalysis ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showMoreAnalysis && <div id="more-analysis-panel" className="px-4 pb-4 space-y-5">
+              {/* Trend Chart */}
+              <div className="bg-neutral-900 rounded-lg border border-neutral-800 p-4">
               <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
                 <h2 className="font-bold text-neutral-300 text-base flex items-center gap-2"><Icons.TrendingUp /> 熱量趨勢</h2>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1638,6 +1686,8 @@ const App: React.FC = () => {
               coachStatus={coachStatus}
               handleAskCoach={handleAskCoach}
             />
+              </div>}
+            </section>
           </>
         )}
 
@@ -1669,10 +1719,6 @@ const App: React.FC = () => {
               setInputMuscle={setInputMuscle}
               inputVisceral={inputVisceral}
               setInputVisceral={setInputVisceral}
-              inputDose={inputDose}
-              setInputDose={setInputDose}
-              inputNotes={inputNotes}
-              setInputNotes={setInputNotes}
               handleWeightSubmit={handleWeightSubmit}
             />
             <WeightList weightLogs={weightLogs} setConfirmModal={setConfirmModal} />
@@ -1690,7 +1736,7 @@ const App: React.FC = () => {
       {!hasAnalysisResult && !inputModalType && (
         <nav aria-label="主要功能" className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-md grid grid-cols-2 bg-neutral-950/95 backdrop-blur border-t border-neutral-700 px-2 pt-1 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] shadow-[0_-8px_24px_rgba(0,0,0,0.35)]">
           <button aria-current={activeTab === 'daily' ? 'page' : undefined} onClick={() => setActiveTab('daily')} className={`relative min-h-[60px] rounded-lg text-sm font-bold flex flex-col items-center justify-center gap-0.5 ${activeTab === 'daily' ? 'text-teal-300 bg-teal-950/50' : 'text-neutral-400 hover:text-neutral-200'}`}><Icons.Zap className="w-5 h-5" /> 今日{activeTab === 'daily' && <span aria-hidden="true" className="absolute bottom-0.5 w-5 h-0.5 rounded-full bg-teal-400" />}</button>
-          <button aria-current={activeTab === 'weight' ? 'page' : undefined} onClick={() => setActiveTab('weight')} className={`relative min-h-[60px] rounded-lg text-sm font-bold flex flex-col items-center justify-center gap-0.5 ${activeTab === 'weight' ? 'text-teal-300 bg-teal-950/50' : 'text-neutral-400 hover:text-neutral-200'}`}><Icons.TrendingDown className="w-5 h-5" /> 體重與劑量{activeTab === 'weight' && <span aria-hidden="true" className="absolute bottom-0.5 w-5 h-0.5 rounded-full bg-teal-400" />}</button>
+          <button aria-current={activeTab === 'weight' ? 'page' : undefined} onClick={() => setActiveTab('weight')} className={`relative min-h-[60px] rounded-lg text-sm font-bold flex flex-col items-center justify-center gap-0.5 ${activeTab === 'weight' ? 'text-teal-300 bg-teal-950/50' : 'text-neutral-400 hover:text-neutral-200'}`}><Icons.TrendingDown className="w-5 h-5" /> 身體趨勢{activeTab === 'weight' && <span aria-hidden="true" className="absolute bottom-0.5 w-5 h-0.5 rounded-full bg-teal-400" />}</button>
         </nav>
       )}
     </div>

@@ -17,8 +17,6 @@ export interface WeightLog {
     bodyFat?: number;
     muscle?: number;
     visceral?: number;
-    dose?: string;
-    notes?: string;
 }
 
 // Food Log Entry

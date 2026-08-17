@@ -1,4 +1,5 @@
 import type { ActivityLog, ResistanceLog, WeightLog } from '../types';
+import { sanitizeWeightLogs } from './dataSanitizers';
 
 type TrainingExportInput = {
   startDate: string;
@@ -18,9 +19,9 @@ export const buildTrainingExport = ({
   activityLogs,
   resistanceLogs
 }: TrainingExportInput) => {
-  const selectedWeights = weightLogs
+  const selectedWeights = sanitizeWeightLogs(weightLogs
     .filter(log => inRange(log.date, startDate, endDate))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => a.date.localeCompare(b.date)));
   const selectedActivities = activityLogs
     .filter(log => inRange(log.date, startDate, endDate))
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -46,9 +47,7 @@ export const buildTrainingExport = ({
         weight: weight.weight,
         bodyFat: weight.bodyFat,
         muscle: weight.muscle,
-        visceral: weight.visceral,
-        dose: weight.dose,
-        notes: weight.notes
+        visceral: weight.visceral
       } : null,
       cardioOrActivity: activities.map(log => ({
         name: log.activityName || '未命名運動',

@@ -22,8 +22,7 @@ export const CONFIG = {
     // 膳食纖維目標 25g/day。
     // 依據 IOM/DGA 的「每 1000 kcal 攝取 14g 纖維」：1700 kcal × 14 ≈ 24g。
     // 男性一般建議的 30-38g 是以 2000-2500 kcal 計算，在熱量赤字下不適用。
-    // 且 GLP-1 (猛健樂) 使用者常有噁心、脹氣、便秘等腸胃副作用，
-    // 纖維過量會加重不適，25g 是飽足感與腸胃耐受度的平衡點。
+    // 25g 是依目前熱量目標換算出的實用日目標，仍應依個人飲食與專業建議調整。
     FIBER_TARGET: 25,     // Dietary fiber target in grams
     ENABLE_PRO_REVIEW: false, // 完成真實照片 A/B 基準測試後才開啟
 } as const;
@@ -40,6 +39,7 @@ export const STORAGE_KEYS = {
     WATER_LOGS: 'mj_waterLogs',
     FAVORITE_WATER_CONTAINERS: 'mj_favoriteWaterContainers',
     COACH_ADVICE: 'mj_coachAdvice',
+    COACH_ADVICE_VERSION: 'mj_coachAdviceVersion',
     DAILY_TARGET: 'mj_dailyTarget',
     ACTIVITY_TARGET: 'mj_activityTarget',
     WATER_TARGET: 'mj_waterTarget',

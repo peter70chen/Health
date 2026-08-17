@@ -64,6 +64,7 @@ test('趨勢圖的消耗柱要含阻力訓練：純有氧日與純重訓日消�
   await seedTwoDays(page);
   await page.goto(BASE_URL);
 
+  await page.getByRole('button', { name: /更多分析/ }).click();
   await expect(page.getByText('熱量趨勢')).toBeVisible();
 
   const bars = await getBurnBars(page);
@@ -79,6 +80,8 @@ test('儀表板 OUT 與趨勢圖同口徑：重訓當日兩邊都要認得這 22
   await page.setViewportSize(IPHONE_SE);
   await seedTwoDays(page);
   await page.goto(BASE_URL);
+
+  await page.getByRole('button', { name: /更多分析/ }).click();
 
   // 儀表板側：今天只有阻力訓練，OUT 必須顯示 -220 而不是 -0。
   // （這一半在修正前就是對的——儀表板從來沒漏算，漏的是趨勢圖。）

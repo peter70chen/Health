@@ -4,10 +4,12 @@ import {
   sanitizeFavoriteFoods,
   sanitizeFavoriteWaterContainers,
   sanitizeFoodLogs,
-  sanitizeWaterLogs
+  sanitizeWaterLogs,
+  sanitizeWeightLogs
 } from '../lib/dataSanitizers';
 import { sanitizeExportData, type ExportData } from '../lib/backupPayload';
 import { STORAGE_KEYS } from '../lib/config';
+import { COACH_ADVICE_VERSION } from '../lib/prompts';
 import { downloadJsonFile } from '../lib/download';
 import { sortByDateAndIdDesc } from '../lib/utils';
 import type {
@@ -139,9 +141,14 @@ export const useImportExport = ({
 
           // Support both new keys and legacy mj_ keys
           const get = (key: string) => (d[key] !== undefined ? d[key] : d[`mj_${key}`]);
+          const rawWeightLogs = get('weightLogs');
+          const sanitizedWeightLogs = sanitizeWeightLogs(rawWeightLogs);
+          const droppedWeightLogs = Array.isArray(rawWeightLogs)
+            ? rawWeightLogs.length - sanitizedWeightLogs.length
+            : 0;
 
           const summaryItems = [
-            ['體重', get('weightLogs')],
+            ['體重', sanitizedWeightLogs],
             ['飲食', get('foodLogs')],
             ['運動', get('activityLogs')],
             ['常用食物', get('favoriteFoods')],
@@ -163,7 +170,10 @@ export const useImportExport = ({
 
           const summaryText = summaryItems
             .map(([label, value]) => `${label}：${getImportCount(value)} 筆`)
-            .join('\n');
+            .join('\n')
+            + (droppedWeightLogs > 0
+              ? `\n\n注意：${droppedWeightLogs} 筆無法辨識的體重資料不會匯入；舊劑量與體重不適感欄位會一併移除。`
+              : '\n\n舊劑量與體重不適感欄位不會匯入新版 App。');
           const confirmed = window.confirm(
             `準備還原以下資料，這會取代 App 目前同類資料：\n\n${summaryText}\n\n確定要繼續嗎？`
           );
@@ -174,13 +184,24 @@ export const useImportExport = ({
 
           let importCount = 0;
 
-          const w = get('weightLogs') as WeightLog[] | undefined; if (w) { setWeightLogs(sortByDateAndIdDesc(w)); importCount++; }
+          if (Array.isArray(rawWeightLogs)) {
+            setWeightLogs(sortByDateAndIdDesc(sanitizedWeightLogs));
+            importCount++;
+          }
           const f = get('foodLogs') as FoodLog[] | undefined; if (f) { setFoodLogs(sortByDateAndIdDesc(sanitizeFoodLogs(f))); importCount++; }
           const a = get('activityLogs') as ActivityLog[] | undefined; if (a) { setActivityLogs(sortByDateAndIdDesc(sanitizeActivityLogs(a))); importCount++; }
           const ff = get('favoriteFoods') as FavoriteFood[] | undefined; if (ff) { setFavoriteFoods(sanitizeFavoriteFoods(ff)); importCount++; }
           const wl = get('waterLogs') as WaterLog[] | undefined; if (wl) { setWaterLogs(sortByDateAndIdDesc(sanitizeWaterLogs(wl))); importCount++; }
           const fwc = get('favoriteWaterContainers') as FavoriteWaterContainer[] | undefined; if (fwc) { setFavoriteWaterContainers(sanitizeFavoriteWaterContainers(fwc)); importCount++; }
-          const ca = get('coachAdvice'); if (typeof ca === 'string') { setCoachAdvice(ca); importCount++; }
+          const ca = get('coachAdvice');
+          const importedCoachVersion = get('coachAdviceVersion');
+          if (typeof ca === 'string' && importedCoachVersion === COACH_ADVICE_VERSION) {
+            setCoachAdvice(ca);
+            importCount++;
+          } else if (ca !== undefined) {
+            setCoachAdvice('');
+            importCount++;
+          }
 
           const rd = get('resistanceDefs') as ResistanceDef[] | undefined; if (rd) { setResistanceDefs(rd); importCount++; }
           const rl = get('resistanceLogs') as ResistanceLog[] | undefined; if (rl) { setResistanceLogs(sortByDateAndIdDesc(rl)); importCount++; }

@@ -55,7 +55,7 @@ test('分析結果卡的「確認加入」在視窗內可見，不需捲動', as
   expect(box!.y).toBeGreaterThanOrEqual(0);
 
   // 只確認 bounding box 在畫面內還不夠：底部導覽曾經疊在按鈕上方，
-  // 看得到「確認加入」，但手指實際點到的是「體重與劑量」。
+  // 看得到「確認加入」，但手指實際點到的是底部導覽。
   const buttonAtCenter = await page.evaluate(({ x, y }) => {
     const hit = document.elementFromPoint(x, y);
     return hit?.closest('button')?.textContent?.trim() ?? '';
@@ -167,7 +167,7 @@ test('易讀字級在 320px 手機仍可完成首頁、體重與飲食記錄操�
   expect(await hasHorizontalOverflow()).toBe(false);
   await expect(page.getByRole('button', { name: '記錄飲食' })).toBeVisible();
 
-  await page.getByRole('button', { name: /體重與劑量/ }).click();
+  await page.getByRole('button', { name: /身體趨勢/ }).click();
   expect(await hasHorizontalOverflow()).toBe(false);
   await expect(page.getByLabel('體重 (kg)')).toBeVisible();
 

@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.E2E_BASE_URL || process.env.BASE_URL || 'http://localhost:4173/';
 const TARGET_NAME = process.env.TARGET_NAME || 'legacy';
 const OUTPUT_DIR = path.join(process.cwd(), 'verification-results', TARGET_NAME);
 
@@ -55,8 +55,8 @@ test.describe('Consistency Verification', () => {
         await page.goto(BASE_URL);
 
         // 1. Navigate to Weight Tab
-        // Legacy: "體重與劑量", Vite: "體重與劑量"
-        const weightTab = page.locator('button', { hasText: '體重' }).first();
+        // Legacy 與 Vite 都使用「身體趨勢」
+        const weightTab = page.getByRole('button', { name: '身體趨勢' });
         await weightTab.click();
 
         // 2. Input Weight

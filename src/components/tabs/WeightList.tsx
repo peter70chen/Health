@@ -18,22 +18,16 @@ export const WeightList: React.FC<WeightListProps> = ({ weightLogs, setConfirmMo
               <span className="font-extrabold text-white text-lg">{l.weight} kg</span>
             </div>
             <div className="flex items-center gap-3">
-              {l.dose && l.dose !== '0' && (
-                <span className="bg-purple-900/40 text-purple-300 text-xs px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>{l.dose} mg
-                </span>
-              )}
               <button aria-label={`刪除 ${l.date} 的體重紀錄`} onClick={() => setConfirmModal({ id: l.id, type: 'weight' })} className="text-neutral-400 min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-red-400 active:scale-90 transition-transform">
                 <Icons.Trash className="w-4 h-4" />
               </button>
             </div>
           </div>
           <div className="flex gap-2 -mt-2 mb-1 pl-24">
-            {l.bodyFat && <span className="text-[10px] font-bold text-rose-300 bg-rose-900/40 px-1.5 py-0.5 rounded-md">脂 {l.bodyFat}%</span>}
-            {l.muscle && <span className="text-[10px] font-bold text-blue-300 bg-blue-900/40 px-1.5 py-0.5 rounded-md">肌 {l.muscle}kg</span>}
-            {l.visceral && <span className="text-[10px] font-bold text-zinc-300 bg-zinc-700/40 px-1.5 py-0.5 rounded-md">內 {l.visceral}</span>}
+            {l.bodyFat !== undefined && <span className="text-[10px] font-bold text-rose-300 bg-rose-900/40 px-1.5 py-0.5 rounded-md">脂 {l.bodyFat}%</span>}
+            {l.muscle !== undefined && <span className="text-[10px] font-bold text-blue-300 bg-blue-900/40 px-1.5 py-0.5 rounded-md">肌 {l.muscle}kg</span>}
+            {l.visceral !== undefined && <span className="text-[10px] font-bold text-zinc-300 bg-zinc-700/40 px-1.5 py-0.5 rounded-md">內 {l.visceral}</span>}
           </div>
-          {l.notes && <div className="text-xs text-neutral-400 pl-24 truncate pb-1">{l.notes}</div>}
         </div>
       ))}
     </div>
